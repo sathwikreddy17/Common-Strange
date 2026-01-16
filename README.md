@@ -81,6 +81,9 @@ Use the root `Makefile`:
 - `make migrate`
 - `make createsuperuser`
 
+Seed demo content (optional):
+- `docker compose run --rm backend python manage.py seed_demo_content`
+
 > Note: `next build` runs without the backend reachable (CI-friendly). When running locally via compose, the frontend uses `http://backend:8000` by default.
 
 ## Next steps (planned)
