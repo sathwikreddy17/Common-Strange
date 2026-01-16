@@ -32,6 +32,7 @@ node_modules/
 out/
 npm-debug.log*
 yarn-debug.log*
+
 yarn-error.log*
 .pnpm-debug.log*
 
@@ -40,3 +41,11 @@ yarn-error.log*
 
 # Misc
 *.pem
+
+# Docs / planning (keep local)
+Final PoC Blueprint.*
+POC Draft.*
+READ FIRST.*
+copilot.doc
+questions to Antigravity.doc
+suggestions to copilot.doc
