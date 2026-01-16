@@ -130,6 +130,33 @@ class AuthorDetailView(generics.RetrieveAPIView):
     lookup_field = "slug"
 
 
+class SeriesArticleListView(generics.ListAPIView):
+    serializer_class = ArticleListSerializer
+
+    def get_queryset(self):
+        slug = self.kwargs["slug"]
+        return (
+            Article.objects.filter(series__slug=slug, status=ArticleStatus.PUBLISHED)
+            .select_related("category", "series")
+            .prefetch_related("authors")
+            .order_by("-published_at", "-updated_at")
+        )
+
+
+class AuthorArticleListView(generics.ListAPIView):
+    serializer_class = ArticleListSerializer
+
+    def get_queryset(self):
+        slug = self.kwargs["slug"]
+        return (
+            Article.objects.filter(authors__slug=slug, status=ArticleStatus.PUBLISHED)
+            .distinct()
+            .select_related("category", "series")
+            .prefetch_related("authors")
+            .order_by("-published_at", "-updated_at")
+        )
+
+
 # --------
 # Editorial
 # --------

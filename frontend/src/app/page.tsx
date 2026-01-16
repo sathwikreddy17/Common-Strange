@@ -39,6 +39,18 @@ export default async function Home() {
       <header className="mb-10">
         <h1 className="text-3xl font-semibold tracking-tight">Common Strange</h1>
         <p className="mt-2 text-zinc-600">PoC: list of published articles</p>
+
+        <nav className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          <Link className="text-zinc-700 hover:underline" href="/categories">
+            Categories
+          </Link>
+          <Link className="text-zinc-700 hover:underline" href="/authors">
+            Authors
+          </Link>
+          <Link className="text-zinc-700 hover:underline" href="/series">
+            Series
+          </Link>
+        </nav>
       </header>
 
       {articles.length === 0 ? (

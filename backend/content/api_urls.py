@@ -6,16 +6,29 @@ urlpatterns = [
     # Public (read-only)
     path("articles/", views.PublicArticleListView.as_view(), name="public-articles"),
     path("articles/<slug:slug>/", views.PublicArticleDetailView.as_view(), name="public-article-detail"),
+
     path("categories/", views.CategoryListView.as_view(), name="categories"),
     path(
         "categories/<slug:slug>/articles/",
         views.CategoryArticleListView.as_view(),
         name="category-articles",
     ),
+
     path("series/", views.SeriesListView.as_view(), name="series"),
     path("series/<slug:slug>/", views.SeriesDetailView.as_view(), name="series-detail"),
+    path(
+        "series/<slug:slug>/articles/",
+        views.SeriesArticleListView.as_view(),
+        name="series-articles",
+    ),
+
     path("authors/", views.AuthorListView.as_view(), name="authors"),
     path("authors/<slug:slug>/", views.AuthorDetailView.as_view(), name="author-detail"),
+    path(
+        "authors/<slug:slug>/articles/",
+        views.AuthorArticleListView.as_view(),
+        name="author-articles",
+    ),
 
     # Editorial (session auth)
     path(

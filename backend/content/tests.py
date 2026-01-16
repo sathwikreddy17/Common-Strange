@@ -59,6 +59,20 @@ class PublicApiTests(TestCase):
         slugs = {x["slug"] for x in res.json()}
         self.assertIn("deep-dives", slugs)
 
+    def test_public_author_articles_list(self):
+        res = self.client.get("/v1/authors/jane-doe/articles/")
+        self.assertEqual(res.status_code, 200)
+        slugs = {x["slug"] for x in res.json()}
+        self.assertIn("hello", slugs)
+        self.assertNotIn("draft", slugs)
+
+    def test_public_series_articles_list(self):
+        res = self.client.get("/v1/series/deep-dives/articles/")
+        self.assertEqual(res.status_code, 200)
+        slugs = {x["slug"] for x in res.json()}
+        self.assertIn("hello", slugs)
+        self.assertNotIn("draft", slugs)
+
 
 class PreviewTokenTests(TestCase):
     def setUp(self):

@@ -37,9 +37,9 @@ async function fetchAuthor(slug: string): Promise<Author | null> {
   }
 }
 
-async function fetchAllPublishedArticles(): Promise<PublicArticleListItem[]> {
+async function fetchAuthorArticles(slug: string): Promise<PublicArticleListItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/articles/?status=published`, {
+    const res = await fetch(`${API_BASE}/v1/authors/${encodeURIComponent(slug)}/articles/`, {
       next: { revalidate: 60 },
     });
 
@@ -73,10 +73,7 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
   const author = await fetchAuthor(slug);
   if (!author) notFound();
 
-  // PoC-friendly: derive authored articles by filtering the published list.
-  const articles = (await fetchAllPublishedArticles()).filter((a) =>
-    a.authors.some((x) => x.slug === author.slug),
-  );
+  const articles = await fetchAuthorArticles(author.slug);
 
   const canonicalUrl = `${SITE_URL}/authors/${encodeURIComponent(author.slug)}`;
   const breadcrumbJsonLd = {
@@ -96,7 +93,7 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
       />
 
       <div className="mb-8">
-        <Link className="text-sm text-zinc-600 hover:underline" href="/">
+        <Link className="text-sm text-zinc-600 hover:underline" href="/authors">
           Back
         </Link>
       </div>

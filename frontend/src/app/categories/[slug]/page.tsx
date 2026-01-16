@@ -91,7 +91,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       />
 
       <div className="mb-8">
-        <Link className="text-sm text-zinc-600 hover:underline" href="/">
+        <Link className="text-sm text-zinc-600 hover:underline" href="/categories">
           Back
         </Link>
       </div>
