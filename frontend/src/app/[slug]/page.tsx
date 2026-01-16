@@ -93,6 +93,26 @@ function RelatedCard({ related }: { related: PublicArticleListItem }) {
   );
 }
 
+const RESERVED_SLUGS = new Set([
+  "admin",
+  "api",
+  "static",
+  "media",
+  "assets",
+  "dashboard",
+  "login",
+  "logout",
+  "robots.txt",
+  "sitemap.xml",
+  "favicon.ico",
+  "_next",
+]);
+
+function isReservedSlug(slug: string): boolean {
+  const s = (slug ?? "").toLowerCase();
+  return RESERVED_SLUGS.has(s) || s.startsWith("_next");
+}
+
 export default async function ArticlePage({
   params,
   searchParams,
@@ -101,6 +121,9 @@ export default async function ArticlePage({
   searchParams: Promise<{ preview_token?: string }>;
 }) {
   const { slug } = await params;
+
+  if (isReservedSlug(slug)) notFound();
+
   const { preview_token } = await searchParams;
 
   const article = await fetchArticle(slug, preview_token);

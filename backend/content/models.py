@@ -6,8 +6,37 @@ from typing import Optional
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 from .widgets_schema import validate_widgets_json
+
+
+_RESERVED_ARTICLE_SLUGS = {
+    "admin",
+    "api",
+    "static",
+    "media",
+    "assets",
+    "dashboard",
+    "login",
+    "logout",
+    "robots.txt",
+    "sitemap.xml",
+    "favicon.ico",
+    "_next",
+}
+
+
+def _is_reserved_slug(slug: str) -> bool:
+    s = (slug or "").strip().lower()
+    if not s:
+        return False
+    if s in _RESERVED_ARTICLE_SLUGS:
+        return True
+    # Block anything under Next.js internals too
+    if s.startswith("_next"):
+        return True
+    return False
 
 
 class Author(models.Model):
@@ -110,6 +139,10 @@ class Article(models.Model):
 
     def clean(self):
         super().clean()
+
+        if _is_reserved_slug(self.slug):
+            raise ValidationError({"slug": "This slug is reserved and cannot be used."})
+
         self.widgets_json = validate_widgets_json(self.widgets_json)
 
     def save(self, *args, **kwargs):

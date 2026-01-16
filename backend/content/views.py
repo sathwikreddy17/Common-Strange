@@ -64,8 +64,8 @@ class PublicArticleDetailView(generics.RetrieveAPIView):
             )
 
             if token.article.slug != slug:
-                # token is valid, but doesn't correspond to this article
-                raise permissions.PermissionDenied("Invalid preview token.")
+                # Hide existence of other articles/tokens in PoC1
+                raise generics.Http404
 
             # Prefer rendering the exact snapshot linked to the token
             if token.article_version:
