@@ -26,8 +26,18 @@ export default async function AuthorsIndexPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <header className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight">Authors</h1>
-        <p className="mt-2 text-zinc-600">Browse all authors.</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Authors</h1>
+            <p className="mt-2 text-zinc-600">Browse all authors.</p>
+          </div>
+
+          <nav className="text-sm">
+            <Link className="text-zinc-700 hover:underline" href="/tags">
+              Tags
+            </Link>
+          </nav>
+        </div>
       </header>
 
       {authors.length === 0 ? (

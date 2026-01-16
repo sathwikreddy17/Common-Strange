@@ -50,6 +50,9 @@ export default async function Home() {
           <Link className="text-zinc-700 hover:underline" href="/series">
             Series
           </Link>
+          <Link className="text-zinc-700 hover:underline" href="/tags">
+            Tags
+          </Link>
         </nav>
       </header>
 

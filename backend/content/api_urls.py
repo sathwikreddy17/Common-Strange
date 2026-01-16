@@ -30,6 +30,13 @@ urlpatterns = [
         name="author-articles",
     ),
 
+    path("tags/", views.TagListView.as_view(), name="tags"),
+    path(
+        "tags/<slug:slug>/articles/",
+        views.TagArticleListView.as_view(),
+        name="tag-articles",
+    ),
+
     # Editorial (session auth)
     path(
         "editor/",

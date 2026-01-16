@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from .models import Article, Author, Category, Series
+from .models import Article, Author, Category, Series, Tag
 
 # PoC1: render article markdown to HTML on the server.
 import mistune
@@ -40,10 +40,17 @@ class SeriesSerializer(serializers.ModelSerializer):
         fields = ["name", "slug", "description"]
 
 
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ["name", "slug"]
+
+
 class ArticleListSerializer(serializers.ModelSerializer):
     authors = AuthorSerializer(many=True)
     category = CategorySerializer()
     series = SeriesSerializer()
+    tags = TagSerializer(many=True)
 
     class Meta:
         model = Article
@@ -59,6 +66,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
             "category",
             "series",
             "authors",
+            "tags",
         ]
 
 
@@ -66,6 +74,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     authors = AuthorSerializer(many=True)
     category = CategorySerializer()
     series = SeriesSerializer()
+    tags = TagSerializer(many=True)
 
     body_html = serializers.SerializerMethodField()
 
@@ -88,5 +97,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             "category",
             "series",
             "authors",
+            "tags",
             "og_image_key",
         ]

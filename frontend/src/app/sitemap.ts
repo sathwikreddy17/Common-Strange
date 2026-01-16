@@ -24,6 +24,11 @@ type Series = {
   description: string;
 };
 
+type Tag = {
+  name: string;
+  slug: string;
+};
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 async function fetchPublishedArticles(): Promise<PublicArticleListItem[]> {
@@ -71,14 +76,25 @@ async function fetchSeries(): Promise<Series[]> {
   }
 }
 
+async function fetchTags(): Promise<Tag[]> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/tags/`, { next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    return (await res.json()) as Tag[];
+  } catch {
+    return [];
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-  const [articles, categories, authors, series] = await Promise.all([
+  const [articles, categories, authors, series, tags] = await Promise.all([
     fetchPublishedArticles(),
     fetchCategories(),
     fetchAuthors(),
     fetchSeries(),
+    fetchTags(),
   ]);
 
   const pages: MetadataRoute.Sitemap = [
@@ -106,6 +122,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.4,
     },
+    {
+      url: `${siteUrl}/tags`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.35,
+    },
   ];
 
   for (const c of categories) {
@@ -132,6 +154,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.4,
+    });
+  }
+
+  for (const t of tags) {
+    pages.push({
+      url: `${siteUrl}/tags/${encodeURIComponent(t.slug)}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.35,
     });
   }
 

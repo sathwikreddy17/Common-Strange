@@ -15,6 +15,7 @@ from .models import (
     Category,
     PreviewToken,
     Series,
+    Tag,
 )
 from .permissions import IsEditor, IsPublisher, IsWriter
 from .serializers import (
@@ -23,6 +24,7 @@ from .serializers import (
     AuthorSerializer,
     CategorySerializer,
     SeriesSerializer,
+    TagSerializer,
 )
 
 
@@ -35,7 +37,11 @@ class PublicArticleListView(generics.ListAPIView):
     serializer_class = ArticleListSerializer
 
     def get_queryset(self):
-        qs = Article.objects.all().select_related("category", "series").prefetch_related("authors")
+        qs = (
+            Article.objects.all()
+            .select_related("category", "series")
+            .prefetch_related("authors", "tags")
+        )
 
         # Safer default: only published unless explicitly requested.
         status_param = self.request.query_params.get("status")
@@ -48,6 +54,10 @@ class PublicArticleListView(generics.ListAPIView):
         category_slug = self.request.query_params.get("category")
         if category_slug:
             qs = qs.filter(category__slug=category_slug)
+
+        tag_slug = self.request.query_params.get("tag")
+        if tag_slug:
+            qs = qs.filter(tags__slug=tag_slug)
 
         return qs.order_by("-published_at", "-updated_at")
 
@@ -105,6 +115,25 @@ class SeriesListView(generics.ListAPIView):
     serializer_class = SeriesSerializer
 
 
+class TagListView(generics.ListAPIView):
+    queryset = Tag.objects.all().order_by("name")
+    serializer_class = TagSerializer
+
+
+class TagArticleListView(generics.ListAPIView):
+    serializer_class = ArticleListSerializer
+
+    def get_queryset(self):
+        slug = self.kwargs["slug"]
+        return (
+            Article.objects.filter(tags__slug=slug, status=ArticleStatus.PUBLISHED)
+            .distinct()
+            .select_related("category", "series")
+            .prefetch_related("authors", "tags")
+            .order_by("-published_at", "-updated_at")
+        )
+
+
 class CategoryArticleListView(generics.ListAPIView):
     serializer_class = ArticleListSerializer
 
@@ -113,7 +142,7 @@ class CategoryArticleListView(generics.ListAPIView):
         return (
             Article.objects.filter(category__slug=slug, status=ArticleStatus.PUBLISHED)
             .select_related("category", "series")
-            .prefetch_related("authors")
+            .prefetch_related("authors", "tags")
             .order_by("-published_at", "-updated_at")
         )
 
@@ -138,7 +167,7 @@ class SeriesArticleListView(generics.ListAPIView):
         return (
             Article.objects.filter(series__slug=slug, status=ArticleStatus.PUBLISHED)
             .select_related("category", "series")
-            .prefetch_related("authors")
+            .prefetch_related("authors", "tags")
             .order_by("-published_at", "-updated_at")
         )
 
@@ -152,7 +181,7 @@ class AuthorArticleListView(generics.ListAPIView):
             Article.objects.filter(authors__slug=slug, status=ArticleStatus.PUBLISHED)
             .distinct()
             .select_related("category", "series")
-            .prefetch_related("authors")
+            .prefetch_related("authors", "tags")
             .order_by("-published_at", "-updated_at")
         )
 

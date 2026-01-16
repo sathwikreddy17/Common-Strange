@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from .models import Article, ArticleStatus, Author, Series
+from .models import Article, ArticleStatus, Author, Series, Tag
 
 
 class PublicApiTests(TestCase):
@@ -12,6 +12,7 @@ class PublicApiTests(TestCase):
 
         self.author = Author.objects.create(name="Jane Doe", slug="jane-doe", bio="")
         self.series = Series.objects.create(name="Deep Dives", slug="deep-dives", description="")
+        self.tag = Tag.objects.create(name="AI", slug="ai")
 
         self.published = Article.objects.create(
             title="Hello",
@@ -22,6 +23,7 @@ class PublicApiTests(TestCase):
             series=self.series,
         )
         self.published.authors.add(self.author)
+        self.published.tags.add(self.tag)
 
         self.draft = Article.objects.create(
             title="Draft",
@@ -68,6 +70,19 @@ class PublicApiTests(TestCase):
 
     def test_public_series_articles_list(self):
         res = self.client.get("/v1/series/deep-dives/articles/")
+        self.assertEqual(res.status_code, 200)
+        slugs = {x["slug"] for x in res.json()}
+        self.assertIn("hello", slugs)
+        self.assertNotIn("draft", slugs)
+
+    def test_public_tags_list(self):
+        res = self.client.get("/v1/tags/")
+        self.assertEqual(res.status_code, 200)
+        slugs = {x["slug"] for x in res.json()}
+        self.assertIn("ai", slugs)
+
+    def test_public_tag_articles_list(self):
+        res = self.client.get("/v1/tags/ai/articles/")
         self.assertEqual(res.status_code, 200)
         slugs = {x["slug"] for x in res.json()}
         self.assertIn("hello", slugs)

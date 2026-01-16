@@ -127,6 +127,7 @@ class Article(models.Model):
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.SET_NULL)
     series = models.ForeignKey(Series, null=True, blank=True, on_delete=models.SET_NULL)
     authors = models.ManyToManyField(Author, blank=True)
+    tags = models.ManyToManyField(Tag, blank=True)
 
     hero_media = models.ForeignKey(MediaAsset, null=True, blank=True, on_delete=models.SET_NULL)
     is_editor_pick = models.BooleanField(default=False)

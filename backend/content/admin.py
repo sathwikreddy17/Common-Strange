@@ -41,9 +41,9 @@ class ArticleVersionInline(admin.TabularInline):
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
     list_display = ("title", "slug", "status", "publish_at", "published_at", "updated_at")
-    list_filter = ("status", "category", "series", "is_editor_pick")
+    list_filter = ("status", "category", "series", "is_editor_pick", "tags")
     search_fields = ("title", "slug")
-    filter_horizontal = ("authors",)
+    filter_horizontal = ("authors", "tags")
     inlines = [ArticleVersionInline]
 
 
