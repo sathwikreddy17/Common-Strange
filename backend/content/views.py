@@ -95,6 +95,16 @@ class CategoryListView(generics.ListAPIView):
     serializer_class = CategorySerializer
 
 
+class AuthorListView(generics.ListAPIView):
+    queryset = Author.objects.all().order_by("name")
+    serializer_class = AuthorSerializer
+
+
+class SeriesListView(generics.ListAPIView):
+    queryset = Series.objects.all().order_by("name")
+    serializer_class = SeriesSerializer
+
+
 class CategoryArticleListView(generics.ListAPIView):
     serializer_class = ArticleListSerializer
 

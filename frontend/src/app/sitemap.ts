@@ -6,6 +6,24 @@ type PublicArticleListItem = {
   published_at: string | null;
 };
 
+type Category = {
+  name: string;
+  slug: string;
+  description: string;
+};
+
+type Author = {
+  name: string;
+  slug: string;
+  bio: string;
+};
+
+type Series = {
+  name: string;
+  slug: string;
+  description: string;
+};
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 async function fetchPublishedArticles(): Promise<PublicArticleListItem[]> {
@@ -23,9 +41,45 @@ async function fetchPublishedArticles(): Promise<PublicArticleListItem[]> {
   }
 }
 
+async function fetchCategories(): Promise<Category[]> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/categories/`, { next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    return (await res.json()) as Category[];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchAuthors(): Promise<Author[]> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/authors/`, { next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    return (await res.json()) as Author[];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchSeries(): Promise<Series[]> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/series/`, { next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    return (await res.json()) as Series[];
+  } catch {
+    return [];
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const articles = await fetchPublishedArticles();
+
+  const [articles, categories, authors, series] = await Promise.all([
+    fetchPublishedArticles(),
+    fetchCategories(),
+    fetchAuthors(),
+    fetchSeries(),
+  ]);
 
   const pages: MetadataRoute.Sitemap = [
     {
@@ -35,6 +89,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
   ];
+
+  for (const c of categories) {
+    pages.push({
+      url: `${siteUrl}/categories/${encodeURIComponent(c.slug)}`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.6,
+    });
+  }
+
+  for (const a of authors) {
+    pages.push({
+      url: `${siteUrl}/authors/${encodeURIComponent(a.slug)}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.4,
+    });
+  }
+
+  for (const s of series) {
+    pages.push({
+      url: `${siteUrl}/series/${encodeURIComponent(s.slug)}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.4,
+    });
+  }
 
   for (const a of articles) {
     const last = a.updated_at || a.published_at;

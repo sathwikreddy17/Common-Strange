@@ -54,7 +54,11 @@ export default async function Home() {
               </h2>
               {a.dek ? <p className="mt-2 text-zinc-700">{a.dek}</p> : null}
               <div className="mt-3 text-sm text-zinc-500">
-                {a.category ? <span>{a.category.name}</span> : null}
+                {a.category ? (
+                  <Link className="hover:underline" href={`/categories/${a.category.slug}`}>
+                    {a.category.name}
+                  </Link>
+                ) : null}
                 {a.category && a.authors.length ? <span> · </span> : null}
                 {a.authors.length ? (
                   <span>{a.authors.map((x) => x.name).join(", ")}</span>
