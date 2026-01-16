@@ -42,6 +42,7 @@ urlpatterns = [
         "editor/",
         include(
             [
+                # Articles
                 path("articles/", views.EditorArticleCreateView.as_view(), name="editor-article-create"),
                 path("articles/<int:pk>/", views.EditorArticleUpdateView.as_view(), name="editor-article-update"),
                 path("articles/<int:pk>/submit/", views.EditorSubmitView.as_view(), name="editor-article-submit"),
@@ -49,6 +50,32 @@ urlpatterns = [
                 path("articles/<int:pk>/schedule/", views.EditorScheduleView.as_view(), name="editor-article-schedule"),
                 path("articles/<int:pk>/publish_now/", views.EditorPublishNowView.as_view(), name="editor-article-publish-now"),
                 path("articles/<int:pk>/preview_token/", views.EditorPreviewTokenView.as_view(), name="editor-article-preview-token"),
+
+                # Taxonomy
+                path("categories/", views.EditorCategoryListCreateView.as_view(), name="editor-categories"),
+                path(
+                    "categories/<slug:slug>/",
+                    views.EditorCategoryDetailView.as_view(),
+                    name="editor-category-detail",
+                ),
+                path("authors/", views.EditorAuthorListCreateView.as_view(), name="editor-authors"),
+                path(
+                    "authors/<slug:slug>/",
+                    views.EditorAuthorDetailView.as_view(),
+                    name="editor-author-detail",
+                ),
+                path("series/", views.EditorSeriesListCreateView.as_view(), name="editor-series"),
+                path(
+                    "series/<slug:slug>/",
+                    views.EditorSeriesDetailView.as_view(),
+                    name="editor-series-detail",
+                ),
+                path("tags/", views.EditorTagListCreateView.as_view(), name="editor-tags"),
+                path(
+                    "tags/<slug:slug>/",
+                    views.EditorTagDetailView.as_view(),
+                    name="editor-tag-detail",
+                ),
             ]
         ),
     ),

@@ -110,3 +110,40 @@ class PreviewTokenTests(TestCase):
         res = self.client.get(f"/v1/articles/{self.article.slug}/?preview_token={token}")
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["slug"], "draft")
+
+
+class EditorialTaxonomyTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        self.editor_group, _ = Group.objects.get_or_create(name="Editor")
+        self.editor = User.objects.create_user(username="editor", password="pass")
+        self.editor.groups.add(self.editor_group)
+
+        self.client.login(username="editor", password="pass")
+
+    def test_editor_can_create_and_delete_tag(self):
+        create_res = self.client.post(
+            "/v1/editor/tags/",
+            data={"name": "Robots", "slug": "robots"},
+            format="json",
+        )
+        self.assertEqual(create_res.status_code, 201)
+
+        del_res = self.client.delete("/v1/editor/tags/robots/")
+        self.assertIn(del_res.status_code, [204, 404])
+
+    def test_writer_cannot_create_tag(self):
+        self.client.logout()
+
+        writer_group, _ = Group.objects.get_or_create(name="Writer")
+        writer = User.objects.create_user(username="writer2", password="pass")
+        writer.groups.add(writer_group)
+
+        self.client.login(username="writer2", password="pass")
+        res = self.client.post(
+            "/v1/editor/tags/",
+            data={"name": "Blocked", "slug": "blocked"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 403)

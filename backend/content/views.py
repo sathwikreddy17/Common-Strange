@@ -187,6 +187,68 @@ class AuthorArticleListView(generics.ListAPIView):
 
 
 # --------
+# Editorial (taxonomy)
+# --------
+
+
+class _EditorTaxonomyPermissionMixin:
+    """Shared access policy for taxonomy management.
+
+    PoC rule: Editors (and superusers) can manage taxonomy.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsEditor]
+
+
+class EditorCategoryListCreateView(_EditorTaxonomyPermissionMixin, generics.ListCreateAPIView):
+    queryset = Category.objects.all().order_by("name")
+    serializer_class = CategorySerializer
+    lookup_field = "slug"
+
+
+class EditorCategoryDetailView(_EditorTaxonomyPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
+    queryset = Category.objects.all().order_by("name")
+    serializer_class = CategorySerializer
+    lookup_field = "slug"
+
+
+class EditorAuthorListCreateView(_EditorTaxonomyPermissionMixin, generics.ListCreateAPIView):
+    queryset = Author.objects.all().order_by("name")
+    serializer_class = AuthorSerializer
+    lookup_field = "slug"
+
+
+class EditorAuthorDetailView(_EditorTaxonomyPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
+    queryset = Author.objects.all().order_by("name")
+    serializer_class = AuthorSerializer
+    lookup_field = "slug"
+
+
+class EditorSeriesListCreateView(_EditorTaxonomyPermissionMixin, generics.ListCreateAPIView):
+    queryset = Series.objects.all().order_by("name")
+    serializer_class = SeriesSerializer
+    lookup_field = "slug"
+
+
+class EditorSeriesDetailView(_EditorTaxonomyPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
+    queryset = Series.objects.all().order_by("name")
+    serializer_class = SeriesSerializer
+    lookup_field = "slug"
+
+
+class EditorTagListCreateView(_EditorTaxonomyPermissionMixin, generics.ListCreateAPIView):
+    queryset = Tag.objects.all().order_by("name")
+    serializer_class = TagSerializer
+    lookup_field = "slug"
+
+
+class EditorTagDetailView(_EditorTaxonomyPermissionMixin, generics.RetrieveUpdateDestroyAPIView):
+    queryset = Tag.objects.all().order_by("name")
+    serializer_class = TagSerializer
+    lookup_field = "slug"
+
+
+# --------
 # Editorial
 # --------
 

@@ -43,13 +43,25 @@ Base: `/v1/`
 
 ### Editorial API (session auth)
 Base: `/v1/editor/`
-- `POST /articles/` create draft
-- `PATCH /articles/<id>/` update
-- `POST /articles/<id>/submit/`
-- `POST /articles/<id>/approve/`
-- `POST /articles/<id>/schedule/` body: `{ "publish_at": "ISO8601" }`
-- `POST /articles/<id>/publish_now/`
-- `GET /articles/<id>/preview_token/`
+
+- Articles:
+  - `POST /articles/` create draft
+  - `PATCH /articles/<id>/` update
+  - `POST /articles/<id>/submit/`
+  - `POST /articles/<id>/approve/`
+  - `POST /articles/<id>/schedule/` body: `{ "publish_at": "ISO8601" }`
+  - `POST /articles/<id>/publish_now/`
+  - `GET /articles/<id>/preview_token/`
+
+- Taxonomy (Editor-only):
+  - `GET|POST /categories/`
+  - `GET|PATCH|DELETE /categories/<slug>/`
+  - `GET|POST /authors/`
+  - `GET|PATCH|DELETE /authors/<slug>/`
+  - `GET|POST /series/`
+  - `GET|PATCH|DELETE /series/<slug>/`
+  - `GET|POST /tags/`
+  - `GET|PATCH|DELETE /tags/<slug>/`
 
 ### Frontend (Next.js)
 - Home page lists **published** articles.
@@ -87,6 +99,5 @@ Seed demo content (optional):
 > Note: `next build` runs without the backend reachable (CI-friendly). When running locally via compose, the frontend uses `http://backend:8000` by default.
 
 ## Next steps (planned)
-- Add dedicated editorial endpoints to manage taxonomy (categories/authors/series/tags) outside of Django admin.
-- Seed/demo content command for quick local setup.
+- Add a minimal UI for taxonomy management (optional; API is now in place).
 - Optional: richer public discovery endpoints (search, editor picks, “latest”).
