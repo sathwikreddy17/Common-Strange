@@ -1,0 +1,42 @@
+# Root gitignore for Common Strange monorepo
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Env files (never commit secrets)
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Django
+*.log
+staticfiles/
+media/
+db.sqlite3
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Docker / Compose
+**/.docker-volumes/
+
+# Misc
+*.pem

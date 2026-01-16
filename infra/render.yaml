@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: commonstrange-api
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: gunicorn config.wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: commonstrange-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+
+  - type: worker
+    name: commonstrange-worker
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A config worker -l INFO
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: commonstrange-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+
+  - type: cron
+    name: commonstrange-cron
+    env: python
+    rootDir: backend
+    schedule: "*/1 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py publish_due_posts
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: commonstrange-db
+          property: connectionString
+
+databases:
+  - name: commonstrange-db
+    plan: starter

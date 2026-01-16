@@ -1,0 +1,30 @@
+Django>=4.2,<5.0
+asgiref>=3.7
+
+# API
+djangorestframework>=3.15,<4.0
+
+# DB
+psycopg[binary]>=3.1
+
+# Config
+python-dotenv>=1.0
+
+# Static
+whitenoise>=6.6
+
+# Worker
+celery>=5.3
+redis>=5.0
+
+# App server
+gunicorn>=21.2
+
+# Validation
+pydantic>=2.5
+
+# Markdown rendering (PoC1)
+mistune>=3.0,<4.0
+
+# Lint
+ruff>=0.1
