@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -43,6 +44,7 @@ type PublicArticleDetail = {
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 async function fetchArticle(slug: string, previewToken?: string): Promise<PublicArticleDetail | null> {
   const url = new URL(`${API_BASE}/v1/articles/${encodeURIComponent(slug)}/`);
@@ -113,6 +115,37 @@ function isReservedSlug(slug: string): boolean {
   return RESERVED_SLUGS.has(s) || s.startsWith("_next");
 }
 
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview_token?: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  if (isReservedSlug(slug)) return {};
+
+  const { preview_token } = await searchParams;
+  const article = await fetchArticle(slug, preview_token);
+  if (!article) return {};
+
+  const canonical = `${SITE_URL}/${encodeURIComponent(article.slug)}`;
+
+  return {
+    title: `${article.title} | Common Strange`,
+    description: article.dek || undefined,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      type: "article",
+      url: canonical,
+      title: article.title,
+      description: article.dek || undefined,
+    },
+  };
+}
+
 export default async function ArticlePage({
   params,
   searchParams,
@@ -129,6 +162,52 @@ export default async function ArticlePage({
   const article = await fetchArticle(slug, preview_token);
   if (!article) notFound();
 
+  const canonicalUrl = `${SITE_URL}/${encodeURIComponent(article.slug)}`;
+  const publishedTime = article.published_at ?? undefined;
+  const modifiedTime = article.updated_at ?? undefined;
+
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title,
+    description: article.dek || undefined,
+    datePublished: publishedTime,
+    dateModified: modifiedTime,
+    mainEntityOfPage: canonicalUrl,
+    author: article.authors?.length
+      ? article.authors.map((a) => ({ "@type": "Person", name: a.name }))
+      : undefined,
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${SITE_URL}/`,
+      },
+      ...(article.category
+        ? [
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: article.category.name,
+              item: `${SITE_URL}/?category=${encodeURIComponent(article.category.slug)}`,
+            },
+          ]
+        : []),
+      {
+        "@type": "ListItem",
+        position: article.category ? 3 : 2,
+        name: article.title,
+        item: canonicalUrl,
+      },
+    ],
+  };
+
   const widgets = article.widgets_json?.widgets ?? [];
   const relatedCardWidgets = widgets.filter((w) => w.type === "related_card") as RelatedCardWidget[];
 
@@ -142,6 +221,15 @@ export default async function ArticlePage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+
       <div className="mb-8">
         <Link className="text-sm text-zinc-600 hover:underline" href="/">
           Back

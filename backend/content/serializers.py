@@ -48,6 +48,8 @@ class ArticleListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
         fields = [
+            # Needed by the frontend (e.g. widgets like related_card reference articleId)
+            "id",
             "title",
             "slug",
             "dek",

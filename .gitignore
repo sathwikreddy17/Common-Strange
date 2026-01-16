@@ -33,7 +33,6 @@ out/
 npm-debug.log*
 yarn-debug.log*
 
-
 yarn-error.log*
 .pnpm-debug.log*
 
@@ -47,7 +46,11 @@ yarn-error.log*
 Final PoC Blueprint.*
 POC Draft.*
 READ FIRST.*
+
 # Antigravity workflow docs (local-only; cleared after reading)
 copilot.doc
 suggestions to copilot.doc
 questions to Antigravity.doc
+
+# Internal handoff notes (local-only)
+HANDOFF.md

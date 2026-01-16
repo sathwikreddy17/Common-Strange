@@ -14,16 +14,21 @@ type PublicArticleListItem = {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 async function fetchArticles(): Promise<PublicArticleListItem[]> {
-  const res = await fetch(`${API_BASE}/v1/articles/`, {
-    // Revalidate frequently in PoC.
-    next: { revalidate: 60 },
-  });
+  try {
+    const res = await fetch(`${API_BASE}/v1/articles/?status=published`, {
+      // Revalidate frequently in PoC.
+      next: { revalidate: 60 },
+    });
 
-  if (!res.ok) {
-    throw new Error(`Failed to load articles: ${res.status}`);
+    if (!res.ok) {
+      return [];
+    }
+
+    return (await res.json()) as PublicArticleListItem[];
+  } catch {
+    // During `next build` the backend may not be reachable (e.g. in CI).
+    return [];
   }
-
-  return (await res.json()) as PublicArticleListItem[];
 }
 
 export default async function Home() {

@@ -37,8 +37,12 @@ class PublicArticleListView(generics.ListAPIView):
     def get_queryset(self):
         qs = Article.objects.all().select_related("category", "series").prefetch_related("authors")
 
+        # Safer default: only published unless explicitly requested.
         status_param = self.request.query_params.get("status")
-        if status_param and status_param.lower() == "published":
+        if status_param:
+            if status_param.lower() == "published":
+                qs = qs.filter(status=ArticleStatus.PUBLISHED)
+        else:
             qs = qs.filter(status=ArticleStatus.PUBLISHED)
 
         category_slug = self.request.query_params.get("category")
