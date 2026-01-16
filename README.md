@@ -9,6 +9,7 @@ Production-shaped, local-first publishing platform.
 - `packages/` shared packages (currently placeholders for later extraction)
 
 ## Current status (implemented)
+
 ### Publishing spine (PoC1)
 - **Workflow**: Draft → In Review → Scheduled → Published
 - **Preview tokens**: fetch drafts via `?preview_token=...` (24h TTL)
@@ -17,12 +18,28 @@ Production-shaped, local-first publishing platform.
 
 ### Public API (Django/DRF)
 Base: `/v1/`
-- `GET /articles/` (supports `?status=published`, `?category=<slug>`)
-- `GET /articles/<slug>/` (published only unless `?preview_token=...`)
-- `GET /categories/`
-- `GET /categories/<slug>/articles/`
-- `GET /series/<slug>/`
-- `GET /authors/<slug>/`
+
+- Articles:
+  - `GET /articles/` (supports `?status=published`, `?category=<slug>`, `?tag=<slug>`)
+  - `GET /articles/<slug>/` (published only unless `?preview_token=...`)
+
+- Categories:
+  - `GET /categories/`
+  - `GET /categories/<slug>/articles/`
+
+- Authors:
+  - `GET /authors/`
+  - `GET /authors/<slug>/`
+  - `GET /authors/<slug>/articles/`
+
+- Series:
+  - `GET /series/`
+  - `GET /series/<slug>/`
+  - `GET /series/<slug>/articles/`
+
+- Tags:
+  - `GET /tags/`
+  - `GET /tags/<slug>/articles/`
 
 ### Editorial API (session auth)
 Base: `/v1/editor/`
@@ -36,6 +53,11 @@ Base: `/v1/editor/`
 
 ### Frontend (Next.js)
 - Home page lists **published** articles.
+- Browsing pages:
+  - `/categories` + `/categories/[slug]`
+  - `/authors` + `/authors/[slug]`
+  - `/series` + `/series/[slug]`
+  - `/tags` + `/tags/[slug]`
 - Article page supports **preview tokens**.
 - Widgets implemented (PoC1): `pull_quote`, `related_card`.
 - SEO basics implemented:
@@ -44,6 +66,7 @@ Base: `/v1/editor/`
   - per-article canonical + JSON-LD (`Article`, `BreadcrumbList`)
 
 ## Local dev
+
 ### Prereqs
 - Docker + Docker Compose
 
@@ -61,7 +84,6 @@ Use the root `Makefile`:
 > Note: `next build` runs without the backend reachable (CI-friendly). When running locally via compose, the frontend uses `http://backend:8000` by default.
 
 ## Next steps (planned)
-- Add category/author/series hub pages in Next.js.
-- Make public `GET /v1/articles/` default to published-only (safer public API).
-- Expand sitemap to include category/author/series URLs.
-- Add demo seed command and basic fixtures.
+- Add dedicated editorial endpoints to manage taxonomy (categories/authors/series/tags) outside of Django admin.
+- Seed/demo content command for quick local setup.
+- Optional: richer public discovery endpoints (search, editor picks, “latest”).
