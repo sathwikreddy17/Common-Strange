@@ -79,4 +79,6 @@ urlpatterns = [
             ]
         ),
     ),
+
+    path("search/", views.ArticleSearchView.as_view(), name="article-search"),
 ]

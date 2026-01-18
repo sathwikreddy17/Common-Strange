@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -184,6 +185,29 @@ class AuthorArticleListView(generics.ListAPIView):
             .prefetch_related("authors", "tags")
             .order_by("-published_at", "-updated_at")
         )
+
+
+class ArticleSearchView(generics.ListAPIView):
+    serializer_class = ArticleListSerializer
+
+    def get_queryset(self):
+        query = self.request.query_params.get("q", "").strip()
+        qs = (
+            Article.objects.filter(status=ArticleStatus.PUBLISHED)
+            .select_related("category", "series")
+            .prefetch_related("authors", "tags")
+        )
+        if query:
+            vector = SearchVector("title", weight="A") + \
+                     SearchVector("dek", weight="B") + \
+                     SearchVector("body_md", weight="C")
+            search_query = SearchQuery(query)
+            qs = qs.annotate(rank=SearchRank(vector, search_query)) \
+                   .filter(rank__gte=0.1) \
+                   .order_by("-rank", "-published_at")
+        else:
+            qs = qs.order_by("-published_at")[:0]  # Return empty if no query
+        return qs
 
 
 # --------
