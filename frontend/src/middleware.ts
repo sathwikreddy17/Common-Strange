@@ -24,15 +24,16 @@ function withDiag(res: NextResponse) {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // IMPORTANT: never redirect Next.js internal assets.
+  if (pathname.startsWith("/_next")) {
+    return NextResponse.next();
+  }
+
   if (pathname === "/admin") {
     return withDiag(NextResponse.redirect(new URL("/admin/", BACKEND_BASE), 307));
   }
 
   if (pathname === "/api") {
-    return withDiag(NextResponse.redirect(new URL("/", BACKEND_BASE), 307));
-  }
-
-  if (pathname.startsWith("/_next")) {
     return withDiag(NextResponse.redirect(new URL("/", BACKEND_BASE), 307));
   }
 
@@ -60,6 +61,6 @@ export const config = {
     "/robots.txt",
     "/sitemap.xml",
     "/favicon.ico",
-    "/_next/:path*",
+    // NOTE: do NOT include /_next here.
   ],
 };

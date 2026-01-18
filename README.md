@@ -11,7 +11,7 @@ Production-shaped, local-first publishing platform.
 ## Current status (implemented)
 
 ### Publishing spine (PoC1)
-- **Workflow**: Draft → In Review → Scheduled → Published
+- **Workflow**: Draft  In Review  Scheduled  Published
 - **Preview tokens**: fetch drafts via `?preview_token=...` (24h TTL)
 - **Revision snapshots**: `ArticleVersion` snapshots created on key transitions
 - **Scheduled publish**: cron-compatible management command `publish_due_posts`
@@ -22,6 +22,7 @@ Base: `/v1/`
 - Articles:
   - `GET /articles/` (supports `?status=published`, `?category=<slug>`, `?tag=<slug>`)
   - `GET /articles/<slug>/` (published only unless `?preview_token=...`)
+  - `GET /search/?q=...` (published only)
 
 - Categories:
   - `GET /categories/`
@@ -65,6 +66,8 @@ Base: `/v1/editor/`
 
 ### Frontend (Next.js)
 - Home page lists **published** articles.
+- Search bar uses `/v1/search?q=...`.
+- Home page includes basic **Trending** + **Editor Picks** sections (PoC heuristics).
 - Browsing pages:
   - `/categories` + `/categories/[slug]`
   - `/authors` + `/authors/[slug]`
@@ -84,8 +87,8 @@ Base: `/v1/editor/`
 
 ### Environment files
 Copy the example env files and adjust as needed:
-- `backend/.env.local.example` → `backend/.env.local`
-- `frontend/.env.local.example` → `frontend/.env.local`
+- `backend/.env.local.example`  `backend/.env.local`
+- `frontend/.env.local.example`  `frontend/.env.local`
 
 ### Run
 Use the root `Makefile`:
@@ -96,8 +99,30 @@ Use the root `Makefile`:
 Seed demo content (optional):
 - `docker compose run --rm backend python manage.py seed_demo_content`
 
-> Note: `next build` runs without the backend reachable (CI-friendly). When running locally via compose, the frontend uses `http://backend:8000` by default.
+## Lessons learned (debugging)
+
+### 1) CORS settings require the package in the container
+If `corsheaders` is enabled in `INSTALLED_APPS` but `django-cors-headers` is not installed in the image, Django will crash at startup with:
+`ModuleNotFoundError: No module named 'corsheaders'`.
+
+Fix: ensure `django-cors-headers` is listed in `backend/requirements.txt` and rebuild the backend image.
+
+### 2) Do not redirect Next.js internal assets (`/_next/*`)
+Redirecting `/_next/*` to the backend breaks the frontend (browser cannot load JS/CSS) and you will see errors like:
+- `Failed to load resource: A server with the specified hostname could not be found` (e.g. `http://backend:8000/...`)
+
+Fix: `frontend/src/middleware.ts` must **not** match or redirect `/_next/*`.
+
+### 3) Compose networking: browser vs container hostnames
+Inside Docker, services can reach each other via `http://backend:8000`, but the **host browser cannot resolve** `backend`.
+
+Fix: the frontend now provides a **same-origin proxy** route:
+- `frontend/src/app/v1/[[...path]]/route.ts`
+
+The browser calls `http://localhost:3000/v1/...` and Next forwards to the backend service internally.
 
 ## Next steps (planned)
-- Add a minimal UI for taxonomy management (optional; API is now in place).
-- Optional: richer public discovery endpoints (search, editor picks, “latest”).
+- Richer public discovery (editor picks, events, trending)
+- Media/OG image pipeline
+- Video widget
+- Google News sitemap
