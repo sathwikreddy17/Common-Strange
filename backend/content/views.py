@@ -27,6 +27,7 @@ from .serializers import (
     SeriesSerializer,
     TagSerializer,
 )
+from .og_image import generate_placeholder_og_image
 
 
 # --------
@@ -405,3 +406,16 @@ class EditorPreviewTokenView(APIView):
         )
         token = PreviewToken.mint(article=article, article_version=version, created_by=request.user)
         return Response({"preview_token": token.token, "expires_at": token.expires_at})
+
+
+class EditorGenerateOgImageView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsEditor]
+
+    def post(self, request, pk: int):
+        article = get_object_or_404(Article, pk=pk)
+
+        result = generate_placeholder_og_image(slug=article.slug, title=article.title)
+        article.og_image_key = result.key
+        article.save(update_fields=["og_image_key", "updated_at"])
+
+        return Response({"og_image_key": article.og_image_key})

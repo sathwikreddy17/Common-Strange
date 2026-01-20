@@ -2,6 +2,7 @@ from django.urls import include, path
 
 from . import views
 from .news_sitemap import google_news_sitemap
+from .og_views import PublicMediaView
 
 urlpatterns = [
     # Public (read-only)
@@ -51,6 +52,7 @@ urlpatterns = [
                 path("articles/<int:pk>/schedule/", views.EditorScheduleView.as_view(), name="editor-article-schedule"),
                 path("articles/<int:pk>/publish_now/", views.EditorPublishNowView.as_view(), name="editor-article-publish-now"),
                 path("articles/<int:pk>/preview_token/", views.EditorPreviewTokenView.as_view(), name="editor-article-preview-token"),
+                path("articles/<int:pk>/generate_og/", views.EditorGenerateOgImageView.as_view(), name="editor-article-generate-og"),
 
                 # Taxonomy
                 path("categories/", views.EditorCategoryListCreateView.as_view(), name="editor-categories"),
@@ -84,4 +86,9 @@ urlpatterns = [
     path("search/", views.ArticleSearchView.as_view(), name="article-search"),
 
     path("news-sitemap.xml", google_news_sitemap, name="google-news-sitemap"),
+]
+
+# Public media (generated assets)
+urlpatterns += [
+    path("media/<path:key>", PublicMediaView.as_view(), name="public-media"),
 ]
