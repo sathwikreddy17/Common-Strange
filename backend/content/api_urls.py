@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from . import views
+from .news_sitemap import google_news_sitemap
 
 urlpatterns = [
     # Public (read-only)
@@ -81,4 +82,6 @@ urlpatterns = [
     ),
 
     path("search/", views.ArticleSearchView.as_view(), name="article-search"),
+
+    path("news-sitemap.xml", google_news_sitemap, name="google-news-sitemap"),
 ]
