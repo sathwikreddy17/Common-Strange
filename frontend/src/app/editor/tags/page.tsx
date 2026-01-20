@@ -6,11 +6,6 @@ export const metadata: Metadata = {
   title: "Editor · Tags",
 };
 
-type Tag = {
-  name: string;
-  slug: string;
-};
-
 export default function EditorTagsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -20,7 +15,7 @@ export default function EditorTagsPage() {
         </Link>
       </div>
 
-      <TaxonomyManager<Tag>
+      <TaxonomyManager
         title="Tags"
         description="Create and delete tags (Editor-only)."
         listPath="/v1/editor/tags/"

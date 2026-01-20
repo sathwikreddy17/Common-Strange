@@ -4,6 +4,32 @@ import ArticleEditForm from "./edit-form";
 import TaxonomyForm from "./taxonomy-form";
 import WidgetsForm from "./widgets-form";
 
+type Widget =
+  | { type: "pull_quote"; text: string; attribution?: string | null }
+  | { type: "related_card"; articleId: number };
+
+type SlugObj = { slug: string };
+
+function hasSlug(x: unknown): x is SlugObj {
+  return !!x && typeof x === "object" && "slug" in x && typeof (x as { slug?: unknown }).slug === "string";
+}
+
+function isWidgetContainer(x: unknown): x is { widgets: unknown[] } {
+  return !!x && typeof x === "object" && "widgets" in x && Array.isArray((x as { widgets?: unknown }).widgets);
+}
+
+function isWidget(x: unknown): x is Widget {
+  if (!x || typeof x !== "object" || !("type" in x)) return false;
+  const t = String((x as { type?: unknown }).type);
+  if (t === "pull_quote") {
+    return typeof (x as { text?: unknown }).text === "string";
+  }
+  if (t === "related_card") {
+    return typeof (x as { articleId?: unknown }).articleId === "number";
+  }
+  return false;
+}
+
 type EditorialArticleDetail = {
   id: number;
   title: string;
@@ -30,34 +56,15 @@ export default function EditFormClient({ article }: Props) {
   // Normalize taxonomy fields for TaxonomyForm
   const normalized = {
     id: article.id,
-    category:
-      article.category && typeof article.category === "object" && "slug" in article.category
-        ? { slug: String((article.category as any).slug) }
-        : null,
-    series:
-      article.series && typeof article.series === "object" && "slug" in article.series
-        ? { slug: String((article.series as any).slug) }
-        : null,
-    authors: Array.isArray(article.authors)
-      ? article.authors
-          .filter((a) => a && typeof a === "object" && "slug" in a)
-          .map((a) => ({ slug: String((a as any).slug) }))
-      : [],
-    tags: Array.isArray(article.tags)
-      ? article.tags
-          .filter((t) => t && typeof t === "object" && "slug" in t)
-          .map((t) => ({ slug: String((t as any).slug) }))
-      : [],
+    category: hasSlug(article.category) ? { slug: article.category.slug } : null,
+    series: hasSlug(article.series) ? { slug: article.series.slug } : null,
+    authors: Array.isArray(article.authors) ? article.authors.filter(hasSlug).map((a) => ({ slug: a.slug })) : [],
+    tags: Array.isArray(article.tags) ? article.tags.filter(hasSlug).map((t) => ({ slug: t.slug })) : [],
   };
 
-  let widgets: any[] = [];
-  if (
-    article.widgets_json &&
-    typeof article.widgets_json === "object" &&
-    "widgets" in article.widgets_json &&
-    Array.isArray((article.widgets_json as any).widgets)
-  ) {
-    widgets = (article.widgets_json as any).widgets;
+  let widgets: Widget[] = [];
+  if (isWidgetContainer(article.widgets_json)) {
+    widgets = article.widgets_json.widgets.filter(isWidget);
   }
 
   return (

@@ -11,7 +11,7 @@ export default async function EditorArticlesPage() {
   let error: string | null = null;
   try {
     articles = await fetchEditorialArticles();
-  } catch (e) {
+  } catch {
     error = "Not authenticated or not authorized. Log in via /admin/login/ and ensure you are in the Writer or Editor group.";
   }
 

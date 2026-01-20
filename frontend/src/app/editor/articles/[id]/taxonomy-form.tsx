@@ -65,7 +65,7 @@ export default function TaxonomyForm({ article }: Props) {
         tags: form.tags,
       });
       setSuccess(true);
-    } catch (e) {
+    } catch {
       setError("Save failed. Check your permissions and try again.");
     } finally {
       setSaving(false);

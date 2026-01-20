@@ -6,12 +6,6 @@ export const metadata: Metadata = {
   title: "Editor · Series",
 };
 
-type Series = {
-  name: string;
-  slug: string;
-  description: string;
-};
-
 export default function EditorSeriesPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -21,7 +15,7 @@ export default function EditorSeriesPage() {
         </Link>
       </div>
 
-      <TaxonomyManager<Series>
+      <TaxonomyManager
         title="Series"
         description="Create and delete series (Editor-only)."
         listPath="/v1/editor/series/"

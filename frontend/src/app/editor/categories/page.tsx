@@ -6,12 +6,6 @@ export const metadata: Metadata = {
   title: "Editor · Categories",
 };
 
-type Category = {
-  name: string;
-  slug: string;
-  description: string;
-};
-
 export default function EditorCategoriesPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -21,7 +15,7 @@ export default function EditorCategoriesPage() {
         </Link>
       </div>
 
-      <TaxonomyManager<Category>
+      <TaxonomyManager
         title="Categories"
         description="Create and delete categories (Editor-only)."
         listPath="/v1/editor/categories/"

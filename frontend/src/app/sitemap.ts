@@ -29,11 +29,17 @@ type Tag = {
   slug: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+function apiUrl(path: string) {
+  if (API_BASE) return `${API_BASE}${path}`;
+  return new URL(path, SITE_URL).toString();
+}
 
 async function fetchPublishedArticles(): Promise<PublicArticleListItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/articles/?status=published`, {
+    const res = await fetch(apiUrl(`/v1/articles/?status=published`), {
       // Sitemap can be cached a bit; regenerate periodically.
       next: { revalidate: 3600 },
     });
@@ -48,7 +54,7 @@ async function fetchPublishedArticles(): Promise<PublicArticleListItem[]> {
 
 async function fetchCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/categories/`, { next: { revalidate: 3600 } });
+    const res = await fetch(apiUrl(`/v1/categories/`), { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     return (await res.json()) as Category[];
   } catch {
@@ -58,7 +64,7 @@ async function fetchCategories(): Promise<Category[]> {
 
 async function fetchAuthors(): Promise<Author[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/authors/`, { next: { revalidate: 3600 } });
+    const res = await fetch(apiUrl(`/v1/authors/`), { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     return (await res.json()) as Author[];
   } catch {
@@ -68,7 +74,7 @@ async function fetchAuthors(): Promise<Author[]> {
 
 async function fetchSeries(): Promise<Series[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/series/`, { next: { revalidate: 3600 } });
+    const res = await fetch(apiUrl(`/v1/series/`), { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     return (await res.json()) as Series[];
   } catch {
@@ -78,7 +84,7 @@ async function fetchSeries(): Promise<Series[]> {
 
 async function fetchTags(): Promise<Tag[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/tags/`, { next: { revalidate: 3600 } });
+    const res = await fetch(apiUrl(`/v1/tags/`), { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     return (await res.json()) as Tag[];
   } catch {
@@ -87,7 +93,7 @@ async function fetchTags(): Promise<Tag[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = SITE_URL;
 
   const [articles, categories, authors, series, tags] = await Promise.all([
     fetchPublishedArticles(),

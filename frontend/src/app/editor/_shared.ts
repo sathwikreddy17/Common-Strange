@@ -1,6 +1,12 @@
-type Json = any;
+type Json = unknown;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+function apiUrl(path: string) {
+  if (API_BASE) return `${API_BASE}${path}`;
+  return new URL(path, SITE_URL).toString();
+}
 
 export class ApiError extends Error {
   status: number;
@@ -31,7 +37,7 @@ async function readMaybeJson(res: Response): Promise<unknown> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     cache: "no-store",
     credentials: "include",
   });
@@ -45,7 +51,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, data: Json): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(data ?? {}),
@@ -62,7 +68,7 @@ export async function apiPost<T>(path: string, data: Json): Promise<T> {
 }
 
 export async function apiPatch<T>(path: string, data: Json): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(data ?? {}),
@@ -79,7 +85,7 @@ export async function apiPatch<T>(path: string, data: Json): Promise<T> {
 }
 
 export async function apiDelete(path: string): Promise<void> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     method: "DELETE",
     cache: "no-store",
     credentials: "include",

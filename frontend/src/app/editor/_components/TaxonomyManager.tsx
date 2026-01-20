@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
-type ApiErrorLike = {
-  status?: number;
-};
+import { apiDelete, apiGet, apiPost, formatAuthHint } from "../_shared";
 
 type FieldSpec = {
   key: string;
@@ -14,7 +11,7 @@ type FieldSpec = {
   type?: "text" | "textarea";
 };
 
-type Props<TItem extends { slug: string }> = {
+type Props = {
   title: string;
   description?: string;
   listPath: string;
@@ -23,29 +20,7 @@ type Props<TItem extends { slug: string }> = {
   fields: FieldSpec[];
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
-
-async function readMaybeJson(res: Response): Promise<unknown> {
-  const ct = res.headers.get("content-type") ?? "";
-  if (ct.includes("application/json")) {
-    try {
-      return await res.json();
-    } catch {
-      return undefined;
-    }
-  }
-  try {
-    return await res.text();
-  } catch {
-    return undefined;
-  }
-}
-
-function authHintFromStatus(status?: number): string {
-  if (status === 401) return "Not authenticated (401). Log in via /admin/login/.";
-  if (status === 403) return "Not authorized (403). Ensure you are in the Editor group.";
-  return "Request failed.";
-}
+type Item = { slug: string } & Record<string, unknown>;
 
 function buildInitialForm(fields: FieldSpec[]): Record<string, string> {
   const out: Record<string, string> = {};
@@ -53,10 +28,10 @@ function buildInitialForm(fields: FieldSpec[]): Record<string, string> {
   return out;
 }
 
-export default function TaxonomyManager<TItem extends { slug: string }>(props: Props<TItem>) {
+export default function TaxonomyManager(props: Props) {
   const { title, description, listPath, detailPathPrefix, fields } = props;
 
-  const [items, setItems] = useState<TItem[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,18 +48,11 @@ export default function TaxonomyManager<TItem extends { slug: string }>(props: P
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}${listPath}`, {
-        cache: "no-store",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        throw Object.assign(new Error("Load failed"), { status: res.status } satisfies ApiErrorLike);
-      }
-      const data = (await res.json()) as TItem[];
+      const data = await apiGet<Item[]>(listPath);
       setItems(data);
-    } catch (e: any) {
+    } catch (e) {
       setItems([]);
-      setError(authHintFromStatus(e?.status));
+      setError(formatAuthHint(e));
     } finally {
       setLoading(false);
     }
@@ -105,25 +73,11 @@ export default function TaxonomyManager<TItem extends { slug: string }>(props: P
       const payload: Record<string, string> = {};
       for (const f of fields) payload[f.key] = String(form[f.key] ?? "").trim();
 
-      const res = await fetch(`${API_BASE}${listPath}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-        cache: "no-store",
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const body = await readMaybeJson(res);
-        throw Object.assign(new Error(typeof body === "string" ? body : "Create failed"), {
-          status: res.status,
-        } satisfies ApiErrorLike);
-      }
-
+      await apiPost(listPath, payload);
       setForm(buildInitialForm(fields));
       await load();
-    } catch (e: any) {
-      setError(authHintFromStatus(e?.status));
+    } catch (e) {
+      setError(formatAuthHint(e));
     } finally {
       setSubmitting(false);
     }
@@ -135,19 +89,10 @@ export default function TaxonomyManager<TItem extends { slug: string }>(props: P
     setError(null);
     try {
       const detailPath = `${detailPathPrefix}${encodeURIComponent(slug)}/`;
-      const res = await fetch(`${API_BASE}${detailPath}`, {
-        method: "DELETE",
-        cache: "no-store",
-        credentials: "include",
-      });
-
-      if (!res.ok && res.status !== 404) {
-        throw Object.assign(new Error("Delete failed"), { status: res.status } satisfies ApiErrorLike);
-      }
-
+      await apiDelete(detailPath);
       await load();
-    } catch (e: any) {
-      setError(authHintFromStatus(e?.status));
+    } catch (e) {
+      setError(formatAuthHint(e));
     }
   }
 
@@ -208,12 +153,14 @@ export default function TaxonomyManager<TItem extends { slug: string }>(props: P
               <li key={it.slug} className="rounded-xl border border-zinc-200 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-medium break-words">{(it as any).name ?? it.slug}</div>
+                    <div className="font-medium break-words">{("name" in it ? String((it as unknown as { name?: unknown }).name ?? it.slug) : it.slug)}</div>
                     <div className="mt-1 text-sm text-zinc-500 break-words">{it.slug}</div>
-                    {(it as any).description ? (
-                      <p className="mt-3 text-sm text-zinc-700">{(it as any).description}</p>
+                    {"description" in it && (it as unknown as { description?: unknown }).description ? (
+                      <p className="mt-3 text-sm text-zinc-700">{String((it as unknown as { description?: unknown }).description)}</p>
                     ) : null}
-                    {(it as any).bio ? <p className="mt-3 text-sm text-zinc-700">{(it as any).bio}</p> : null}
+                    {"bio" in it && (it as unknown as { bio?: unknown }).bio ? (
+                      <p className="mt-3 text-sm text-zinc-700">{String((it as unknown as { bio?: unknown }).bio)}</p>
+                    ) : null}
                   </div>
                   <button
                     onClick={() => void onDelete(it.slug)}

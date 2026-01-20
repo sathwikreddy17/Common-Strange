@@ -38,7 +38,7 @@ export default function WidgetsForm({ id, widgets }: Props) {
         widgets_json: { widgets: form },
       });
       setSuccess(true);
-    } catch (e) {
+    } catch {
       setError("Save failed. Check your permissions and try again.");
     } finally {
       setSaving(false);

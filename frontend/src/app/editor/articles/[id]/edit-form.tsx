@@ -43,7 +43,7 @@ export default function ArticleEditForm({ article }: Props) {
     try {
       await apiPatch(`/v1/editor/articles/${article.id}/`, form);
       setSuccess(true);
-    } catch (e) {
+    } catch {
       setError("Save failed. Check your permissions and try again.");
     } finally {
       setSaving(false);

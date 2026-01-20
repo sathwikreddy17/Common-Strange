@@ -8,19 +8,21 @@ type Props = {
   status: string;
 };
 
+type ActionBody = unknown;
+
 export default function WorkflowButtons({ id, status }: Props) {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  async function doAction(action: string, body?: any) {
+  async function doAction(action: string, body?: ActionBody) {
     setLoading(action);
     setError(null);
     setSuccess(null);
     try {
       await apiPost(`/v1/editor/articles/${id}/${action}/`, body ?? {});
       setSuccess(`Action '${action}' succeeded.`);
-    } catch (e) {
+    } catch {
       setError(`Action '${action}' failed.`);
     } finally {
       setLoading(null);

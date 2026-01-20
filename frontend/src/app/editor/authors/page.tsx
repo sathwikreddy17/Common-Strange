@@ -6,12 +6,6 @@ export const metadata: Metadata = {
   title: "Editor · Authors",
 };
 
-type Author = {
-  name: string;
-  slug: string;
-  bio: string;
-};
-
 export default function EditorAuthorsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -21,7 +15,7 @@ export default function EditorAuthorsPage() {
         </Link>
       </div>
 
-      <TaxonomyManager<Author>
+      <TaxonomyManager
         title="Authors"
         description="Create and delete authors (Editor-only)."
         listPath="/v1/editor/authors/"

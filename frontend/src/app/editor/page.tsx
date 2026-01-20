@@ -10,12 +10,12 @@ export default function EditorHomePage() {
         </p>
 
         <div className="mt-4">
-          <a
+          <Link
             className="inline-flex rounded-lg border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:bg-zinc-50"
             href="/admin/login/"
           >
             Log in (Django Admin)
-          </a>
+          </Link>
         </div>
       </header>
 
