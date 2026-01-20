@@ -2,6 +2,17 @@
 
 Production-shaped, local-first publishing platform.
 
+## Source of truth: Final PoC Blueprint
+All feature work and prioritization **must** be driven by `Final PoC Blueprint.txt` (and/or `Final PoC Blueprint.docx`).
+
+When deciding the “next set of features”, always:
+1) Read the relevant section(s) of `Final PoC Blueprint`.
+2) Map the requested work to blueprint requirements.
+3) Implement in blueprint order/priority unless explicitly overridden.
+4) Update documentation/tests with references to the blueprint section(s) that motivated the change.
+
+If something is implemented that is **not** in the blueprint, document it as an explicit deviation (with rationale).
+
 ## Monorepo structure
 - `frontend/` Next.js (Vercel)
 - `backend/` Django + DRF (Render)
