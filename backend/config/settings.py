@@ -134,6 +134,42 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# ---
+# S3-compatible media (MinIO locally, R2 in production)
+#
+# Blueprint requirement: never store media on Render filesystem; always write to
+# S3-compatible storage. Local dev uses MinIO to keep code paths identical.
+#
+# This project still keeps MEDIA_ROOT as a fallback for generated SVGs/debug.
+# ---
+MEDIA_USE_S3 = os.getenv("MEDIA_USE_S3", "0") == "1"
+
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
+AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL", "")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "auto")
+
+# When using a custom endpoint (MinIO/R2), path-style may be required.
+AWS_S3_ADDRESSING_STYLE = os.getenv("AWS_S3_ADDRESSING_STYLE", "path")
+AWS_S3_SIGNATURE_VERSION = os.getenv("AWS_S3_SIGNATURE_VERSION", "s3v4")
+AWS_DEFAULT_ACL = None
+
+# Public base URL for objects (e.g. Cloudflare CDN in front of R2, or MinIO host)
+MEDIA_PUBLIC_BASE_URL = os.getenv("MEDIA_PUBLIC_BASE_URL", "")
+
+# Media prefix within the bucket
+MEDIA_BUCKET_PREFIX = os.getenv("MEDIA_BUCKET_PREFIX", "")
+
+# ---
+# Celery (worker already exists in docker-compose; wire settings)
+# ---
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", os.getenv("REDIS_URL", "redis://redis:6379/0"))
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

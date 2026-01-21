@@ -1,13 +1,19 @@
 from django.urls import include, path
 
 from . import views
+from .events_views import EditorTrendingView, PageviewEventView, ReadEventView
 from .news_sitemap import google_news_sitemap
 from .og_views import PublicMediaView
+from .media_views import EditorMediaUploadView
 
 urlpatterns = [
     # Public (read-only)
     path("articles/", views.PublicArticleListView.as_view(), name="public-articles"),
     path("articles/<slug:slug>/", views.PublicArticleDetailView.as_view(), name="public-article-detail"),
+
+    # Events (public)
+    path("events/pageview/", PageviewEventView.as_view(), name="events-pageview"),
+    path("events/read/", ReadEventView.as_view(), name="events-read"),
 
     path("categories/", views.CategoryListView.as_view(), name="categories"),
     path(
@@ -53,6 +59,12 @@ urlpatterns = [
                 path("articles/<int:pk>/publish_now/", views.EditorPublishNowView.as_view(), name="editor-article-publish-now"),
                 path("articles/<int:pk>/preview_token/", views.EditorPreviewTokenView.as_view(), name="editor-article-preview-token"),
                 path("articles/<int:pk>/generate_og/", views.EditorGenerateOgImageView.as_view(), name="editor-article-generate-og"),
+
+                # Media
+                path("media/upload/", EditorMediaUploadView.as_view(), name="editor-media-upload"),
+
+                # Trending (editor-only)
+                path("trending/", EditorTrendingView.as_view(), name="editor-trending"),
 
                 # Taxonomy
                 path("categories/", views.EditorCategoryListCreateView.as_view(), name="editor-categories"),

@@ -4,57 +4,60 @@ import os
 from dataclasses import dataclass
 
 from django.conf import settings
-from django.utils.text import slugify
+
+from .storage import StoredObject, put_bytes
 
 
 @dataclass(frozen=True)
 class OgImageResult:
     key: str
-    relative_path: str
-
-
-def ensure_og_dir() -> str:
-    out_dir = os.path.join(settings.MEDIA_ROOT, "og")
-    os.makedirs(out_dir, exist_ok=True)
-    return out_dir
 
 
 def generate_placeholder_og_image(*, slug: str, title: str) -> OgImageResult:
-    """Generate a placeholder OG image.
+    """Generate a minimal placeholder OG image (SVG).
 
-    PoC implementation: no image processing dependency. We just write an SVG.
-    Modern platforms accept SVG for OG images in many cases; if not, we can
-    swap to PNG later using Pillow.
+    Kept for PoC convenience; publish-time PNG generation is the intended path.
     """
 
-    out_dir = ensure_og_dir()
-    safe_slug = slugify(slug) or "article"
+    safe_slug = (slug or "").strip() or "untitled"
+    path = settings.MEDIA_ROOT / "og" / f"{safe_slug}.svg"
+    path.parent.mkdir(parents=True, exist_ok=True)
 
-    # store as svg
-    filename = f"{safe_slug}.svg"
-    abs_path = os.path.join(out_dir, filename)
+    svg = f"""<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'>
+  <rect width='100%' height='100%' fill='#0b1220'/>
+  <text x='60' y='220' fill='#ffffff' font-size='56' font-family='ui-sans-serif, system-ui'>Common Strange</text>
+  <text x='60' y='320' fill='#e5e7eb' font-size='44' font-family='ui-sans-serif, system-ui'>{title}</text>
+</svg>"""
 
-    # Very small, clean SVG. Keep it simple.
-    safe_title = (title or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    path.write_text(svg, encoding="utf-8")
+    rel_key = f"og/{safe_slug}.svg"
+    return OgImageResult(key=rel_key)
 
-    svg = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1200\" height=\"630\" viewBox=\"0 0 1200 630\">
-  <defs>
-    <linearGradient id=\"g\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">
-      <stop offset=\"0%\" stop-color=\"#0f172a\"/>
-      <stop offset=\"100%\" stop-color=\"#111827\"/>
-    </linearGradient>
-  </defs>
-  <rect width=\"1200\" height=\"630\" fill=\"url(#g)\"/>
-  <rect x=\"60\" y=\"60\" width=\"1080\" height=\"510\" rx=\"28\" fill=\"#0b1220\" opacity=\"0.75\"/>
-  <text x=\"120\" y=\"210\" fill=\"#e5e7eb\" font-family=\"ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto\" font-size=\"28\" opacity=\"0.85\">Common Strange</text>
-  <text x=\"120\" y=\"280\" fill=\"#ffffff\" font-family=\"ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto\" font-size=\"64\" font-weight=\"700\">{safe_title}</text>
-</svg>
-"""
 
-    with open(abs_path, "w", encoding="utf-8") as f:
-        f.write(svg)
+def generate_publish_time_og_image_png(*, slug: str, title: str) -> StoredObject:
+    """Generate a publish-time OG PNG (stored in S3-compatible storage).
 
-    rel_path = f"og/{filename}"
-    key = rel_path  # key is a relative path within MEDIA_ROOT for PoC
-    return OgImageResult(key=key, relative_path=rel_path)
+    This is intentionally minimalist (no fonts) but matches the blueprint shape:
+    - output: og/<slug>.png
+    - stored in R2/MinIO via `content.storage`
+    """
+
+    # Lazy import to keep Pillow optional during early startup tooling.
+    from PIL import Image, ImageDraw
+
+    safe_slug = (slug or "").strip() or "untitled"
+    key = f"og/{safe_slug}.png"
+
+    img = Image.new("RGB", (1200, 630), color=(11, 18, 32))
+    draw = ImageDraw.Draw(img)
+
+    draw.text((60, 180), "Common Strange", fill=(255, 255, 255))
+    draw.text((60, 260), (title or "").strip()[:120], fill=(229, 231, 235))
+
+    import io
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    data = buf.getvalue()
+
+    return put_bytes(key=key, data=data, content_type="image/png")

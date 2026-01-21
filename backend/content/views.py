@@ -198,17 +198,26 @@ class ArticleSearchView(generics.ListAPIView):
             .select_related("category", "series")
             .prefetch_related("authors", "tags")
         )
-        if query:
-            vector = SearchVector("title", weight="A") + \
-                     SearchVector("dek", weight="B") + \
-                     SearchVector("body_md", weight="C")
-            search_query = SearchQuery(query)
-            qs = qs.annotate(rank=SearchRank(vector, search_query)) \
-                   .filter(rank__gte=0.1) \
-                   .order_by("-rank", "-published_at")
-        else:
-            qs = qs.order_by("-published_at")[:0]  # Return empty if no query
-        return qs
+
+        if not query:
+            return qs.order_by("-published_at")[:0]
+
+        # Phase 1 search strategy (blueprint): Postgres FTS. We currently use a
+        # generated search vector (title/dek/body/tags) and rank with ts_rank_cd.
+        vector = (
+            SearchVector("title", weight="A")
+            + SearchVector("dek", weight="B")
+            + SearchVector("body_md", weight="C")
+            + SearchVector("tags__name", weight="B")
+        )
+        search_query = SearchQuery(query)
+
+        return (
+            qs.annotate(rank=SearchRank(vector, search_query))
+            .filter(rank__gte=0.1)
+            .order_by("-rank", "-published_at")
+            .distinct()
+        )
 
 
 # --------

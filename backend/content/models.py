@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from .widgets_schema import validate_widgets_json
+from .events import EventKind
 
 
 _RESERVED_ARTICLE_SLUGS = {
@@ -222,3 +223,30 @@ class PreviewToken(models.Model):
 
     def is_valid(self) -> bool:
         return timezone.now() < self.expires_at
+
+
+class Event(models.Model):
+    """Public events: pageviews and read completion.
+
+    Blueprint: store events for trending and analytics. Keep schema minimal.
+    """
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    kind = models.CharField(max_length=20, default=EventKind.PAGEVIEW)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name="events")
+
+    # Lightweight metadata (no user accounts in PoC)
+    path = models.CharField(max_length=512, blank=True, default="")
+    referrer = models.CharField(max_length=512, blank=True, default="")
+    user_agent = models.CharField(max_length=512, blank=True, default="")
+
+    # Optional metrics
+    read_ratio = models.FloatField(null=True, blank=True)
+    duration_ms = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["kind", "created_at"]),
+            models.Index(fields=["article", "created_at"]),
+        ]
