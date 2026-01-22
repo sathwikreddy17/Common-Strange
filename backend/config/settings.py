@@ -152,9 +152,18 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Blueprint requirement: never store media on Render filesystem; always write to
 # S3-compatible storage. Local dev uses MinIO to keep code paths identical.
 #
-# This project still keeps MEDIA_ROOT as a fallback for generated SVGs/debug.
+# This project keeps MEDIA_ROOT only as a dev fallback.
 # ---
 MEDIA_USE_S3 = os.getenv("MEDIA_USE_S3", "0") == "1"
+
+# Safety guard: in non-debug environments, require S3 media unless explicitly overridden.
+# Render filesystem is ephemeral, so filesystem media would lead to broken OG/media URLs.
+ALLOW_FILESYSTEM_MEDIA_FALLBACK = os.getenv("ALLOW_FILESYSTEM_MEDIA_FALLBACK", "0") == "1"
+if not DEBUG and not MEDIA_USE_S3 and not ALLOW_FILESYSTEM_MEDIA_FALLBACK:
+    raise RuntimeError(
+        "MEDIA_USE_S3 must be enabled in production (set MEDIA_USE_S3=1). "
+        "If you *really* want filesystem fallback, set ALLOW_FILESYSTEM_MEDIA_FALLBACK=1."
+    )
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
