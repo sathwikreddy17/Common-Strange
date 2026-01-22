@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import ArticleEvents from "@/app/[slug]/ArticleEvents";
+import ShareActions from "@/app/[slug]/ShareActions";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -81,12 +82,23 @@ async function fetchArticle(slug: string, previewToken?: string): Promise<Public
   return (await res.json()) as PublicArticleDetail;
 }
 
-async function fetchRelatedArticleById(id: number): Promise<PublicArticleListItem | null> {
+async function fetchRelatedArticlesByIds(ids: number[]): Promise<Map<number, PublicArticleListItem>> {
+  const unique = Array.from(new Set(ids)).filter((x) => Number.isFinite(x));
+  const out = new Map<number, PublicArticleListItem>();
+  if (!unique.length) return out;
+
+  // Current API only exposes list; keep this efficient-ish by doing a single fetch and mapping IDs.
+  // If/when backend adds /v1/articles/by-ids?ids=..., switch here.
   const origin = await getOriginForServerFetch();
   const res = await fetch(apiUrl(`/v1/articles/`, origin), { next: { revalidate: 60 } });
-  if (!res.ok) return null;
+  if (!res.ok) return out;
   const items = (await res.json()) as PublicArticleListItem[];
-  return items.find((x) => x.id === id) ?? null;
+
+  const wanted = new Set(unique);
+  for (const it of items) {
+    if (wanted.has(it.id)) out.set(it.id, it);
+  }
+  return out;
 }
 
 function PullQuote({ widget }: { widget: PullQuoteWidget }) {
@@ -254,13 +266,7 @@ export default async function ArticlePage({
   const widgets = article.widgets_json?.widgets ?? [];
   const relatedCardWidgets = widgets.filter((w) => w.type === "related_card") as RelatedCardWidget[];
 
-  const relatedByIdEntries = await Promise.all(
-    relatedCardWidgets.map(async (w) => [w.articleId, await fetchRelatedArticleById(w.articleId)] as const),
-  );
-  const relatedById = new Map<number, PublicArticleListItem>();
-  for (const [id, maybe] of relatedByIdEntries) {
-    if (maybe) relatedById.set(id, maybe);
-  }
+  const relatedById = await fetchRelatedArticlesByIds(relatedCardWidgets.map((w) => w.articleId));
 
   const relatedCards = relatedCardWidgets
     .map((w) => relatedById.get(w.articleId))
@@ -282,6 +288,7 @@ export default async function ArticlePage({
         </Link>
 
         <div className="flex items-center gap-2">
+          <ShareActions title={shareTitle} url={shareUrl} />
           <a
             className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(
