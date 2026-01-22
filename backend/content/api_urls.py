@@ -2,11 +2,15 @@ from django.urls import include, path
 
 from . import views
 from .events_views import EditorTrendingView, PageviewEventView, ReadEventView
+from .health_views import HealthView
 from .news_sitemap import google_news_sitemap
 from .og_views import PublicMediaView
 from .media_views import EditorMediaUploadView
 
 urlpatterns = [
+    # Health
+    path("health/", HealthView.as_view(), name="health"),
+
     # Public (read-only)
     path("articles/", views.PublicArticleListView.as_view(), name="public-articles"),
     path("articles/<slug:slug>/", views.PublicArticleDetailView.as_view(), name="public-article-detail"),

@@ -31,7 +31,14 @@ import os
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-change-me")
 DEBUG = os.getenv("DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+# Hosts / proxy
+# When ALLOWED_HOSTS is unset in dev/CI, allow localhost-ish hosts and Django's
+# test client host to avoid DisallowedHost surprises.
+_raw_allowed_hosts = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+if _raw_allowed_hosts:
+    ALLOWED_HOSTS = _raw_allowed_hosts
+else:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "testserver"]
 
 
 # Application definition
@@ -63,6 +70,11 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# Optional lightweight request logging (Render logs).
+if os.getenv("REQUEST_LOGGING", "0") == "1":
+    MIDDLEWARE.insert(0, "content.middleware.RequestTimingLogMiddleware")
+
 
 ROOT_URLCONF = "config.urls"
 
