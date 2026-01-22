@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // Use a same-origin proxy so this works both in Docker and non-Docker.
 const API_BASE = "";
@@ -17,6 +17,13 @@ type PublicArticleListItem = {
   authors: Array<{ name: string; slug: string; bio: string }>;
 };
 
+type TrendingItem = {
+  id: number;
+  slug: string;
+  title: string;
+  views_24h: number;
+};
+
 async function fetchArticles(): Promise<PublicArticleListItem[]> {
   try {
     const res = await fetch(`${API_BASE}/v1/articles?status=published`);
@@ -24,6 +31,22 @@ async function fetchArticles(): Promise<PublicArticleListItem[]> {
     return (await res.json()) as PublicArticleListItem[];
   } catch (err) {
     console.error("Error fetching articles:", err);
+    return [];
+  }
+}
+
+async function fetchTrending(): Promise<TrendingItem[]> {
+  // Editor-only endpoint (session auth). If the user isn't logged in, we should just treat it as "no trending".
+  try {
+    // Note: call without trailing slash to avoid Next.js proxy/middleware redirect.
+    const res = await fetch(`${API_BASE}/v1/editor/trending`, {
+      credentials: "include",
+    });
+
+    if (!res.ok) return [];
+    const data = (await res.json()) as unknown;
+    return Array.isArray(data) ? (data as TrendingItem[]) : [];
+  } catch {
     return [];
   }
 }
@@ -66,7 +89,7 @@ function SearchBar({ onResults }: { onResults: (results: PublicArticleListItem[]
 }
 
 function getTrendingAndEditorPicks(articles: PublicArticleListItem[]) {
-  // Trending: most recently updated
+  // Trending: most recently updated (fallback)
   const trending = [...articles].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 3);
   // Editor Picks: if you have a flag, use it; else, pick first 2
   const editorPicks = articles.slice(0, 2);
@@ -76,6 +99,7 @@ function getTrendingAndEditorPicks(articles: PublicArticleListItem[]) {
 export default function Home() {
   const [results, setResults] = useState<PublicArticleListItem[] | null>(null);
   const [articles, setArticles] = useState<PublicArticleListItem[]>([]);
+  const [trending, setTrending] = useState<TrendingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,14 +118,19 @@ export default function Home() {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchArticles();
+
+        // Load in parallel.
+        const [data, trendingData] = await Promise.all([fetchArticles(), fetchTrending()]);
+
         if (cancelled) return;
         setArticles(Array.isArray(data) ? data : []);
+        setTrending(Array.isArray(trendingData) ? trendingData : []);
       } catch (err) {
         if (cancelled) return;
-        console.error("Article fetch error:", err);
-        setError("Failed to load articles. Please check your backend/API connection.");
+        console.error("Home fetch error:", err);
+        setError("Failed to load content. Please check your backend/API connection.");
         setArticles([]);
+        setTrending([]);
       } finally {
         if (cancelled) return;
         clearTimeout(t);
@@ -115,7 +144,9 @@ export default function Home() {
     };
   }, []);
 
-  const { trending, editorPicks } = getTrendingAndEditorPicks(results ?? articles);
+  const { editorPicks, trending: fallbackTrending } = useMemo(() => {
+    return getTrendingAndEditorPicks(results ?? articles);
+  }, [results, articles]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -150,14 +181,27 @@ export default function Home() {
             <h2 className="text-lg font-bold mb-2">Trending</h2>
             <ul className="flex gap-4">
               {trending.length === 0 ? (
-                <li className="text-zinc-600">No trending articles yet.</li>
+                // If not logged in, editor trending will return 403 and we treat as empty.
+                // In that case, show a reasonable public fallback so the section isn't blank.
+                fallbackTrending.length === 0 ? (
+                  <li className="text-zinc-600">No trending articles yet.</li>
+                ) : (
+                  fallbackTrending.map((a) => (
+                    <li key={a.slug} className="border rounded p-3 w-1/3">
+                      <Link className="font-medium hover:underline" href={`/${a.slug}`}>
+                        {a.title}
+                      </Link>
+                      <div className="text-xs text-zinc-500 mt-1">{a.category?.name}</div>
+                    </li>
+                  ))
+                )
               ) : (
-                trending.map((a) => (
+                trending.slice(0, 3).map((a) => (
                   <li key={a.slug} className="border rounded p-3 w-1/3">
                     <Link className="font-medium hover:underline" href={`/${a.slug}`}>
                       {a.title}
                     </Link>
-                    <div className="text-xs text-zinc-500 mt-1">{a.category?.name}</div>
+                    <div className="text-xs text-zinc-500 mt-1">{a.views_24h} views (24h)</div>
                   </li>
                 ))
               )}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import ArticleEvents from "@/app/[slug]/ArticleEvents";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -251,6 +252,9 @@ export default async function ArticlePage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
+      {/* Blueprint: emit pageview/read events */}
+      <ArticleEvents slug={article.slug} />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}

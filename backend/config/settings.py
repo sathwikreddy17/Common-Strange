@@ -200,3 +200,27 @@ CORS_ALLOWED_ORIGINS = [
 ]
 # Optional: if you want to allow all for dev (not recommended for prod)
 # CORS_ALLOW_ALL_ORIGINS = True
+
+# ---
+# Cache (Redis-backed when available)
+# Blueprint: cache search results for short TTL once traffic starts.
+# ---
+REDIS_URL = os.getenv("REDIS_URL", "")
+
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+            "TIMEOUT": 60,
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "commonstrange-locmem",
+            "TIMEOUT": 60,
+        }
+    }

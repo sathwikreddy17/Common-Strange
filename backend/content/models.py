@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.contrib.postgres.search import SearchVectorField
 
 from .widgets_schema import validate_widgets_json
 from .events import EventKind
@@ -133,8 +134,9 @@ class Article(models.Model):
     hero_media = models.ForeignKey(MediaAsset, null=True, blank=True, on_delete=models.SET_NULL)
     is_editor_pick = models.BooleanField(default=False)
 
-    # Placeholder for PoC 2 (FTS). Will migrate to tsvector later.
-    search_tsv = models.TextField(blank=True, default="")
+    # Blueprint Phase 1 (FTS): persist a real tsvector column and index it.
+    # This enables fast FTS queries and ranking.
+    search_tsv = SearchVectorField(null=True, blank=True)
 
     # Placeholder for PoC 2 (OG generation)
     og_image_key = models.CharField(max_length=512, blank=True, default="")

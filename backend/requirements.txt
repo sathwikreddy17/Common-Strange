@@ -19,6 +19,7 @@ whitenoise>=6.6
 # Worker
 celery>=5.3
 redis>=5.0
+django-redis>=6.0
 
 # S3-compatible storage (MinIO/R2)
 boto3>=1.34

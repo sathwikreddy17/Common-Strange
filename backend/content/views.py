@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
+from django.core.cache import cache
+from django.db import models
+from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .events import EventKind
 from .models import (
     Article,
     ArticleStatus,
@@ -28,6 +32,15 @@ from .serializers import (
     TagSerializer,
 )
 from .og_image import generate_placeholder_og_image
+from .search_index import update_article_search_tsv
+
+
+class ExtractEpoch(models.Func):
+    """Return seconds (float) from an interval/timedelta expression (Postgres)."""
+
+    function = "EXTRACT"
+    template = "EXTRACT(EPOCH FROM %(expressions)s)"
+    output_field = models.FloatField()
 
 
 # --------
@@ -202,22 +215,80 @@ class ArticleSearchView(generics.ListAPIView):
         if not query:
             return qs.order_by("-published_at")[:0]
 
-        # Phase 1 search strategy (blueprint): Postgres FTS. We currently use a
-        # generated search vector (title/dek/body/tags) and rank with ts_rank_cd.
-        vector = (
-            SearchVector("title", weight="A")
-            + SearchVector("dek", weight="B")
-            + SearchVector("body_md", weight="C")
-            + SearchVector("tags__name", weight="B")
-        )
+        # Blueprint: short-TTL cache for search results (safe if Redis is absent).
+        cache_key = f"search:v1:q={query.lower()}"
+        cached_ids = cache.get(cache_key)
+        if isinstance(cached_ids, list) and cached_ids:
+            preserved = models.Case(
+                *[models.When(pk=pk, then=pos) for pos, pk in enumerate(cached_ids)],
+                output_field=models.IntegerField(),
+            )
+            return (
+                qs.filter(pk__in=cached_ids)
+                .annotate(_order=preserved)
+                .order_by("_order")
+            )
+
         search_query = SearchQuery(query)
 
-        return (
-            qs.annotate(rank=SearchRank(vector, search_query))
-            .filter(rank__gte=0.1)
-            .order_by("-rank", "-published_at")
+        # --- Boosting knobs (blueprint) ---
+        since = timezone.now() - timezone.timedelta(hours=24)
+
+        # Base FTS score (ts_rank_cd)
+        base_rank = SearchRank(models.F("search_tsv"), search_query)
+
+        # Editor pick: small additive bump.
+        editor_pick_boost = models.Case(
+            models.When(is_editor_pick=True, then=models.Value(0.15)),
+            default=models.Value(0.0),
+            output_field=models.FloatField(),
+        )
+
+        # Trending: normalize pageviews in last 24h via ln(views+1) so it doesn't dominate.
+        views_24h = models.Count(
+            "events",
+            filter=models.Q(events__kind=EventKind.PAGEVIEW, events__created_at__gte=since),
+        )
+        trending_boost = (
+            models.functions.Ln(models.Value(1.0) + Cast(views_24h, models.FloatField()))
+            * models.Value(0.05)
+        )
+
+        # Recency: newer articles get a small bump (decays over a few days).
+        # Postgres: age(now(), published_at) returns an interval.
+        age_seconds = ExtractEpoch(models.Func(timezone.now(), models.F("published_at"), function="age"))
+        recency_boost = models.Case(
+            models.When(published_at__isnull=True, then=models.Value(0.0)),
+            default=models.Value(0.2)
+            / (
+                models.Value(1.0)
+                + (Cast(age_seconds, models.FloatField()) / models.Value(86400.0))
+            ),
+            output_field=models.FloatField(),
+        )
+
+        ranked = (
+            qs.annotate(
+                base_rank=base_rank,
+                views_24h=views_24h,
+                editor_pick_boost=editor_pick_boost,
+                trending_boost=trending_boost,
+                recency_boost=recency_boost,
+                score=models.F("base_rank")
+                + models.F("editor_pick_boost")
+                + models.F("trending_boost")
+                + models.F("recency_boost"),
+            )
+            .filter(base_rank__gte=0.1)
+            .order_by("-score", "-published_at")
             .distinct()
         )
+
+        # Cache the ordered IDs (TTL is controlled by default cache TIMEOUT).
+        ids = list(ranked.values_list("id", flat=True)[:50])
+        cache.set(cache_key, ids, timeout=60)
+
+        return ranked
 
 
 # --------
@@ -382,6 +453,9 @@ class EditorScheduleView(APIView):
         article.publish_at = dt
         article.save()
 
+        # Keep FTS materialized (blueprint) so search is fast once it publishes.
+        update_article_search_tsv(article=article)
+
         _snapshot(article, kind=ArticleVersionKind.SCHEDULE, user=request.user)
         return Response({"status": article.status, "publish_at": article.publish_at})
 
@@ -399,6 +473,9 @@ class EditorPublishNowView(APIView):
         if not article.publish_at:
             article.publish_at = article.published_at
         article.save()
+
+        # Blueprint: materialize FTS vector at publish time.
+        update_article_search_tsv(article=article)
 
         _snapshot(article, kind=ArticleVersionKind.PUBLISH, user=request.user)
         return Response({"status": article.status, "published_at": article.published_at})
