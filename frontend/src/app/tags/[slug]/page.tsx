@@ -71,34 +71,64 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
   const articles = await fetchTagArticles(tag.slug);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <div className="mb-8">
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <div className="mb-10">
         <Link className="text-sm text-zinc-600 hover:underline" href="/tags">
-          Back
+          ← Back to Tags
         </Link>
       </div>
 
       <header className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight">#{tag.name}</h1>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">#{tag.name}</h1>
+            <p className="mt-2 text-zinc-600">All published articles tagged “{tag.name}”.</p>
+          </div>
+
+          <nav className="text-sm text-zinc-600">
+            <Link className="hover:underline" href="/categories">
+              Categories
+            </Link>
+            <span className="px-2">·</span>
+            <Link className="hover:underline" href="/series">
+              Series
+            </Link>
+            <span className="px-2">·</span>
+            <Link className="hover:underline" href="/authors">
+              Authors
+            </Link>
+          </nav>
+        </div>
       </header>
 
       {articles.length === 0 ? (
         <p className="text-zinc-600">No published articles with this tag yet.</p>
       ) : (
-        <ul className="space-y-6">
+        <ul className="space-y-4">
           {articles.map((a) => (
-            <li key={a.slug} className="rounded-xl border border-zinc-200 p-5">
-              <h2 className="text-xl font-medium">
+            <li key={a.slug} className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                {a.category ? (
+                  <Link className="hover:underline" href={`/categories/${a.category.slug}`}>
+                    {a.category.name}
+                  </Link>
+                ) : null}
+                {a.category && a.series ? <span aria-hidden>·</span> : null}
+                {a.series ? (
+                  <Link className="hover:underline" href={`/series/${a.series.slug}`}>
+                    {a.series.name}
+                  </Link>
+                ) : null}
+                {(a.category || a.series) && a.authors.length ? <span aria-hidden>·</span> : null}
+                {a.authors.length ? <span className="truncate">{a.authors.map((x) => x.name).join(", ")}</span> : null}
+              </div>
+
+              <h2 className="mt-2 text-xl font-semibold text-zinc-900">
                 <Link className="hover:underline" href={`/${a.slug}`}>
                   {a.title}
                 </Link>
               </h2>
               {a.dek ? <p className="mt-2 text-zinc-700">{a.dek}</p> : null}
-              <div className="mt-3 text-sm text-zinc-500">
-                {a.category ? <span>{a.category.name}</span> : null}
-                {a.category && a.authors.length ? <span> · </span> : null}
-                {a.authors.length ? <span>{a.authors.map((x) => x.name).join(", ")}</span> : null}
-              </div>
             </li>
           ))}
         </ul>

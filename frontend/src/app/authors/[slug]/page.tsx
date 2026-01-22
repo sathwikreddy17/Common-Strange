@@ -81,43 +81,72 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
-      { "@type": "ListItem", position: 2, name: author.name, item: canonicalUrl },
+      { "@type": "ListItem", position: 2, name: "Authors", item: `${SITE_URL}/authors` },
+      { "@type": "ListItem", position: 3, name: author.name, item: canonicalUrl },
     ],
   };
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
+    <main className="mx-auto max-w-6xl px-6 py-14">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
-      <div className="mb-8">
+      <div className="mb-10">
         <Link className="text-sm text-zinc-600 hover:underline" href="/authors">
-          Back
+          ← Back to Authors
         </Link>
       </div>
 
       <header className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight">{author.name}</h1>
-        {author.bio ? <p className="mt-2 text-zinc-600">{author.bio}</p> : null}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">{author.name}</h1>
+            {author.bio ? <p className="mt-2 max-w-2xl text-zinc-600">{author.bio}</p> : null}
+          </div>
+
+          <nav className="text-sm text-zinc-600">
+            <Link className="hover:underline" href="/categories">
+              Categories
+            </Link>
+            <span className="px-2">·</span>
+            <Link className="hover:underline" href="/tags">
+              Tags
+            </Link>
+            <span className="px-2">·</span>
+            <Link className="hover:underline" href="/series">
+              Series
+            </Link>
+          </nav>
+        </div>
       </header>
 
       {articles.length === 0 ? (
         <p className="text-zinc-600">No published articles by this author yet.</p>
       ) : (
-        <ul className="space-y-6">
+        <ul className="space-y-4">
           {articles.map((a) => (
-            <li key={a.slug} className="rounded-xl border border-zinc-200 p-5">
-              <h2 className="text-xl font-medium">
+            <li key={a.slug} className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                {a.category ? (
+                  <Link className="hover:underline" href={`/categories/${a.category.slug}`}>
+                    {a.category.name}
+                  </Link>
+                ) : null}
+                {a.category && a.series ? <span aria-hidden>·</span> : null}
+                {a.series ? (
+                  <Link className="hover:underline" href={`/series/${a.series.slug}`}>
+                    {a.series.name}
+                  </Link>
+                ) : null}
+                {(a.category || a.series) ? <span aria-hidden>·</span> : null}
+                <span className="truncate">{author.name}</span>
+              </div>
+
+              <h2 className="mt-2 text-xl font-semibold text-zinc-900">
                 <Link className="hover:underline" href={`/${a.slug}`}>
                   {a.title}
                 </Link>
               </h2>
               {a.dek ? <p className="mt-2 text-zinc-700">{a.dek}</p> : null}
-              <div className="mt-3 text-sm text-zinc-500">
-                {a.category ? <span>{a.category.name}</span> : null}
-              </div>
             </li>
           ))}
         </ul>
