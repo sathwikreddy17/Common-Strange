@@ -21,10 +21,28 @@ export default async function TagsIndexPage() {
   const tags = await fetchTags();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <main className="mx-auto max-w-6xl px-6 py-14">
       <header className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight">Tags</h1>
-        <p className="mt-2 text-zinc-600">Browse all tags.</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Tags</h1>
+            <p className="mt-2 text-zinc-600">Browse topics across the site.</p>
+          </div>
+
+          <nav className="text-sm text-zinc-600">
+            <Link className="hover:underline" href="/categories">
+              Categories
+            </Link>
+            <span className="px-2">·</span>
+            <Link className="hover:underline" href="/series">
+              Series
+            </Link>
+            <span className="px-2">·</span>
+            <Link className="hover:underline" href="/authors">
+              Authors
+            </Link>
+          </nav>
+        </div>
       </header>
 
       {tags.length === 0 ? (
@@ -34,10 +52,10 @@ export default async function TagsIndexPage() {
           {tags.map((t) => (
             <li key={t.slug}>
               <Link
-                className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-sm text-zinc-800 hover:bg-zinc-50"
+                className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50"
                 href={`/tags/${t.slug}`}
               >
-                {t.name}
+                #{t.name}
               </Link>
             </li>
           ))}

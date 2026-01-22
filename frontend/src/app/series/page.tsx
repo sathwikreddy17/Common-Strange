@@ -24,17 +24,25 @@ export default async function SeriesIndexPage() {
   const series = await fetchSeries();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <main className="mx-auto max-w-6xl px-6 py-14">
       <header className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Series</h1>
-            <p className="mt-2 text-zinc-600">Browse all series.</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Series</h1>
+            <p className="mt-2 text-zinc-600">Follow a thread of stories over time.</p>
           </div>
 
-          <nav className="text-sm">
-            <Link className="text-zinc-700 hover:underline" href="/tags">
+          <nav className="text-sm text-zinc-600">
+            <Link className="hover:underline" href="/categories">
+              Categories
+            </Link>
+            <span className="px-2">·</span>
+            <Link className="hover:underline" href="/tags">
               Tags
+            </Link>
+            <span className="px-2">·</span>
+            <Link className="hover:underline" href="/authors">
+              Authors
             </Link>
           </nav>
         </div>
@@ -43,13 +51,13 @@ export default async function SeriesIndexPage() {
       {series.length === 0 ? (
         <p className="text-zinc-600">No series yet.</p>
       ) : (
-        <ul className="space-y-4">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {series.map((s) => (
-            <li key={s.slug} className="rounded-xl border border-zinc-200 p-5">
-              <Link className="text-lg font-medium hover:underline" href={`/series/${s.slug}`}>
+            <li key={s.slug} className="rounded-2xl border border-zinc-200 bg-white p-6">
+              <Link className="text-lg font-semibold text-zinc-900 hover:underline" href={`/series/${s.slug}`}>
                 {s.name}
               </Link>
-              {s.description ? <p className="mt-2 text-sm text-zinc-600">{s.description}</p> : null}
+              {s.description ? <p className="mt-2 text-sm leading-relaxed text-zinc-600">{s.description}</p> : null}
             </li>
           ))}
         </ul>
