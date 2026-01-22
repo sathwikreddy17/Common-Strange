@@ -185,6 +185,13 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.AllowAny",
     ),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        # Public events ingestion endpoints (pageview/read)
+        "events": os.environ.get("EVENTS_THROTTLE_RATE", "60/min"),
+    },
 }
 
 # Django trailing slash behavior comes from APPEND_SLASH (default True)

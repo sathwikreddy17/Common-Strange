@@ -121,12 +121,21 @@ Seed demo content:
 ---
 
 ## Next steps (planned / backlog)
-From `Final PoC Blueprint`:
-- Search Phase 1 completion:
-  - `tsvector` column + GIN index; update on publish/edit
-  - boosting: editor pick weight, recency decay, trending score from events
-  - caching (short TTL)
-- Frontend event emission (pageview/read) and using real trending
-- “Never store media on filesystem” hardening for production (disable local filesystem fallback outside dev)
-- Video widget (embeds + metadata)
+
+### Backend hardening (do next, in order)
+1) **Events endpoint abuse protection**
+   - Add DRF throttling for `POST /v1/events/pageview/` and `POST /v1/events/read/`
+   - Validate payloads (max lengths; `read_ratio` 0..1)
+2) **Event retention / pruning**
+   - Add a management command (cron-friendly) to prune old `Event` rows (e.g. keep 60–90 days)
+3) **Search robustness**
+   - Ensure `search_tsv` is consistently materialized for published content (backfill job / periodic maintenance)
+4) **Health/observability**
+   - Add a minimal `GET /v1/health/` (DB + cache connectivity)
+   - Improve request logging for key endpoints
+5) **Production safety guards**
+   - Ensure filesystem media fallback is disabled outside dev (enforce `MEDIA_USE_S3=1` semantics)
+
+### From `Final PoC Blueprint` (remaining / ongoing)
 - Better curated homepage modules (Aeon-like)
+- Video widget (embeds + metadata)

@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, serializers
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .events import EventKind
@@ -13,8 +14,8 @@ from .models import Article, ArticleStatus, Event
 
 class PageviewSerializer(serializers.Serializer):
     slug = serializers.SlugField()
-    path = serializers.CharField(required=False, allow_blank=True, default="")
-    referrer = serializers.CharField(required=False, allow_blank=True, default="")
+    path = serializers.CharField(required=False, allow_blank=True, default="", max_length=512)
+    referrer = serializers.CharField(required=False, allow_blank=True, default="", max_length=512)
     duration_ms = serializers.IntegerField(required=False, min_value=0)
 
 
@@ -26,6 +27,8 @@ class ReadSerializer(serializers.Serializer):
 
 class PageviewEventView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "events"
 
     def post(self, request):
         ser = PageviewSerializer(data=request.data)
@@ -47,6 +50,8 @@ class PageviewEventView(APIView):
 
 class ReadEventView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "events"
 
     def post(self, request):
         ser = ReadSerializer(data=request.data)
