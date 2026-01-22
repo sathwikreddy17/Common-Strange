@@ -51,53 +51,85 @@ async function fetchTrending(): Promise<TrendingItem[]> {
   }
 }
 
-function SearchBar({ onResults }: { onResults: (results: PublicArticleListItem[]) => void }) {
+function SearchBar({ onResults }: { onResults: (results: PublicArticleListItem[], q: string) => void }) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
+    const q = query.trim();
+    if (!q) {
+      onResults([], "");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/v1/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`${API_BASE}/v1/search?q=${encodeURIComponent(q)}`);
       if (res.ok) {
-        const data = await res.json();
-        onResults(data);
+        const data = (await res.json()) as unknown;
+        onResults(Array.isArray(data) ? (data as PublicArticleListItem[]) : [], q);
       } else {
-        onResults([]);
+        onResults([], q);
       }
     } catch {
-      onResults([]);
+      onResults([], q);
     }
     setLoading(false);
   }
 
   return (
-    <form className="mb-6 flex gap-2" onSubmit={handleSearch}>
+    <form className="mt-6 flex gap-2" onSubmit={handleSearch}>
       <input
         type="text"
-        className="border rounded px-3 py-2 w-full"
-        placeholder="Search articles..."
+        className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none ring-0 placeholder:text-zinc-400 focus:border-zinc-300"
+        placeholder="Search articles…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <button type="submit" className="bg-zinc-800 text-white px-4 py-2 rounded" disabled={loading}>
-        {loading ? "Searching..." : "Search"}
+      <button
+        type="submit"
+        className="rounded-xl bg-zinc-900 px-5 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
+        disabled={loading}
+      >
+        {loading ? "Searching…" : "Search"}
       </button>
     </form>
   );
 }
 
-function getTrendingAndEditorPicks(articles: PublicArticleListItem[]) {
-  // Trending: most recently updated (fallback)
+function getFallbackModules(articles: PublicArticleListItem[]) {
+  // Pure public fallback while editor-only modules are empty/unauthenticated.
   const trending = [...articles].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 3);
-  // Editor Picks: if you have a flag, use it; else, pick first 2
-  const editorPicks = articles.slice(0, 2);
+  const editorPicks = articles.slice(0, 3);
   return { trending, editorPicks };
+}
+
+function ArticleCard({ a }: { a: PublicArticleListItem }) {
+  return (
+    <li className="group rounded-2xl border border-zinc-200 bg-white p-5 transition hover:border-zinc-300">
+      <h3 className="text-lg font-semibold tracking-tight text-zinc-900">
+        <Link className="hover:underline" href={`/${a.slug}`}>
+          {a.title}
+        </Link>
+      </h3>
+      {a.dek ? <p className="mt-2 text-sm leading-relaxed text-zinc-600">{a.dek}</p> : null}
+      <div className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-xs text-zinc-500">
+        {a.category ? (
+          <Link className="hover:underline" href={`/categories/${a.category.slug}`}>
+            {a.category.name}
+          </Link>
+        ) : null}
+        {a.category && a.authors.length ? <span>·</span> : null}
+        {a.authors.length ? <span>{a.authors.map((x) => x.name).join(", ")}</span> : null}
+      </div>
+    </li>
+  );
 }
 
 export default function Home() {
   const [results, setResults] = useState<PublicArticleListItem[] | null>(null);
+  const [query, setQuery] = useState<string>("");
   const [articles, setArticles] = useState<PublicArticleListItem[]>([]);
   const [trending, setTrending] = useState<TrendingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +151,6 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        // Load in parallel.
         const [data, trendingData] = await Promise.all([fetchArticles(), fetchTrending()]);
 
         if (cancelled) return;
@@ -144,114 +175,120 @@ export default function Home() {
     };
   }, []);
 
-  const { editorPicks, trending: fallbackTrending } = useMemo(() => {
-    return getTrendingAndEditorPicks(results ?? articles);
-  }, [results, articles]);
+  const fallback = useMemo(() => getFallbackModules(articles), [articles]);
+  const feed = results ?? articles;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <main className="mx-auto max-w-5xl px-6 py-14">
       <header className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight">Common Strange</h1>
-        <p className="mt-2 text-zinc-600">PoC: list of published articles</p>
-        <nav className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-          <Link className="text-zinc-700 hover:underline" href="/categories">
-            Categories
-          </Link>
-          <Link className="text-zinc-700 hover:underline" href="/authors">
-            Authors
-          </Link>
-          <Link className="text-zinc-700 hover:underline" href="/series">
-            Series
-          </Link>
-          <Link className="text-zinc-700 hover:underline" href="/tags">
-            Tags
-          </Link>
-        </nav>
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">Common Strange</h1>
+            <p className="mt-2 text-zinc-600">A small publishing PoC (SEO-first).</p>
+
+            <nav className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              <Link className="text-zinc-700 hover:underline" href="/categories">
+                Categories
+              </Link>
+              <Link className="text-zinc-700 hover:underline" href="/authors">
+                Authors
+              </Link>
+              <Link className="text-zinc-700 hover:underline" href="/series">
+                Series
+              </Link>
+              <Link className="text-zinc-700 hover:underline" href="/tags">
+                Tags
+              </Link>
+            </nav>
+          </div>
+
+          <div className="w-full md:w-[420px]">
+            <SearchBar
+              onResults={(r, q) => {
+                setResults(q ? r : null);
+                setQuery(q);
+              }}
+            />
+            {query ? (
+              <div className="mt-2 text-xs text-zinc-500">
+                Showing results for{" "}
+                <span className="font-medium text-zinc-700">“{query}”</span>
+                <button
+                  type="button"
+                  className="ml-2 underline hover:text-zinc-700"
+                  onClick={() => {
+                    setResults(null);
+                    setQuery("");
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </header>
 
-      <SearchBar onResults={setResults} />
-
       {loading ? (
-        <p className="text-zinc-600">Loading articles...</p>
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 text-zinc-700">Loading…</div>
       ) : error ? (
-        <p className="text-red-600">{error}</p>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">{error}</div>
       ) : (
-        <>
-          <section className="mb-8">
-            <h2 className="text-lg font-bold mb-2">Trending</h2>
-            <ul className="flex gap-4">
-              {trending.length === 0 ? (
-                // If not logged in, editor trending will return 403 and we treat as empty.
-                // In that case, show a reasonable public fallback so the section isn't blank.
-                fallbackTrending.length === 0 ? (
-                  <li className="text-zinc-600">No trending articles yet.</li>
-                ) : (
-                  fallbackTrending.map((a) => (
-                    <li key={a.slug} className="border rounded p-3 w-1/3">
-                      <Link className="font-medium hover:underline" href={`/${a.slug}`}>
-                        {a.title}
-                      </Link>
-                      <div className="text-xs text-zinc-500 mt-1">{a.category?.name}</div>
-                    </li>
-                  ))
-                )
-              ) : (
-                trending.slice(0, 3).map((a) => (
-                  <li key={a.slug} className="border rounded p-3 w-1/3">
-                    <Link className="font-medium hover:underline" href={`/${a.slug}`}>
-                      {a.title}
-                    </Link>
-                    <div className="text-xs text-zinc-500 mt-1">{a.views_24h} views (24h)</div>
-                  </li>
-                ))
-              )}
-            </ul>
+        <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
+          <section>
+            <div className="mb-4 flex items-end justify-between">
+              <h2 className="text-lg font-semibold tracking-tight text-zinc-900">Latest</h2>
+              <div className="text-xs text-zinc-500">{feed.length} items</div>
+            </div>
+
+            {feed.length === 0 ? (
+              <p className="text-zinc-600">No published articles yet.</p>
+            ) : (
+              <ul className="space-y-4">
+                {feed.map((a) => (
+                  <ArticleCard key={a.slug} a={a} />
+                ))}
+              </ul>
+            )}
           </section>
 
-          <section className="mb-8">
-            <h2 className="text-lg font-bold mb-2">Editor Picks</h2>
-            <ul className="flex gap-4">
-              {editorPicks.length === 0 ? (
-                <li className="text-zinc-600">No editor picks yet.</li>
-              ) : (
-                editorPicks.map((a) => (
-                  <li key={a.slug} className="border rounded p-3 w-1/3">
-                    <Link className="font-medium hover:underline" href={`/${a.slug}`}>
-                      {a.title}
+          <aside className="space-y-8">
+            <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Trending</h2>
+              <ul className="mt-4 space-y-3">
+                {(trending.length ? trending.slice(0, 5) : fallback.trending).map((t) => (
+                  <li key={t.slug} className="text-sm">
+                    <Link className="font-medium text-zinc-900 hover:underline" href={`/${t.slug}`}>
+                      {t.title}
                     </Link>
-                    <div className="text-xs text-zinc-500 mt-1">{a.category?.name}</div>
+                    {"views_24h" in t ? (
+                      <div className="mt-1 text-xs text-zinc-500">{t.views_24h} views (24h)</div>
+                    ) : (
+                      <div className="mt-1 text-xs text-zinc-500">Recently updated</div>
+                    )}
                   </li>
-                ))
-              )}
-            </ul>
-          </section>
+                ))}
+              </ul>
+            </section>
 
-          {(results ?? articles).length === 0 ? (
-            <p className="text-zinc-600">No published articles yet.</p>
-          ) : (
-            <ul className="space-y-6">
-              {(results ?? articles).map((a) => (
-                <li key={a.slug} className="rounded-xl border border-zinc-200 p-5">
-                  <h2 className="text-xl font-medium">
-                    <Link className="hover:underline" href={`/${a.slug}`}>
+            <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Editor Picks</h2>
+              <ul className="mt-4 space-y-3">
+                {fallback.editorPicks.map((a) => (
+                  <li key={a.slug} className="text-sm">
+                    <Link className="font-medium text-zinc-900 hover:underline" href={`/${a.slug}`}>
                       {a.title}
                     </Link>
-                  </h2>
-                  {a.dek ? <p className="mt-2 text-zinc-700">{a.dek}</p> : null}
-                  <div className="mt-3 text-sm text-zinc-500">
-                    {a.category ? (
-                      <Link className="hover:underline" href={`/categories/${a.category.slug}`}>
-                        {a.category.name}
-                      </Link>
-                    ) : null}
-                    {a.category && a.authors.length ? <span> · </span> : null}
-                    {a.authors.length ? <span>{a.authors.map((x) => x.name).join(", ")}</span> : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+                    {a.category ? <div className="mt-1 text-xs text-zinc-500">{a.category.name}</div> : null}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-xs text-zinc-500">
+                Note: curated homepage modules (publisher/editor) are a blueprint item and come next.
+              </p>
+            </section>
+          </aside>
+        </div>
       )}
     </main>
   );

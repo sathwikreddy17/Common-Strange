@@ -51,9 +51,6 @@ type PublicArticleDetail = {
   og_image_key: string;
 };
 
-// Use same-origin proxy to avoid Docker DNS/CORS issues.
-const API_BASE = "";
-
 async function getOriginForServerFetch(): Promise<string> {
   // In Next.js server components, Node's fetch requires an absolute URL.
   // Build it from the incoming request headers so it works in Docker and locally.
@@ -95,9 +92,7 @@ async function fetchRelatedArticleById(id: number): Promise<PublicArticleListIte
 function PullQuote({ widget }: { widget: PullQuoteWidget }) {
   return (
     <figure className="my-10 rounded-2xl border border-zinc-200 bg-zinc-50 px-6 py-5">
-      <blockquote className="text-lg font-medium leading-relaxed text-zinc-900">
-        “{widget.text}”
-      </blockquote>
+      <blockquote className="text-lg font-medium leading-relaxed text-zinc-900">“{widget.text}”</blockquote>
       {widget.attribution ? (
         <figcaption className="mt-3 text-sm text-zinc-600">— {widget.attribution}</figcaption>
       ) : null}
