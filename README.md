@@ -36,7 +36,8 @@ Blueprint-aligned: MinIO locally / R2 in production shape.
 - S3-compatible storage abstraction (`backend/content/storage.py`)
 - Editor upload endpoint: `POST /v1/editor/media/upload/`
 - Image variants generated as WebP (thumb/medium/large)
-- Public media proxy endpoint: `GET /v1/media/<key>` (works for local filesystem fallback + S3)
+- Public media proxy endpoint: `GET /v1/media/<key>`
+- **Production guard:** filesystem media fallback is blocked outside `DEBUG` unless explicitly overridden (see env vars below)
 
 ### Social growth (publish-time OG images)
 - OG PNG generated at publish time and stored in object storage (`og/<slug>.png`)
@@ -50,25 +51,51 @@ Blueprint-aligned: MinIO locally / R2 in production shape.
   - `POST /v1/events/read/`
 - Editorial endpoint:
   - `GET /v1/editor/trending/` (last-24h pageviews)
+- **Hardening:** DRF scoped throttling (`events`) enabled + retention command (see “Housekeeping”)
 
-### Search (Phase 1 partial)
-- Postgres FTS query includes tags in the vector
-- `pg_trgm` enabled
-- Trigram GIN indexes on `content_article.title` and `content_article.slug`
-
-> Remaining for blueprint parity: migrate `Article.search_tsv` from TextField → real `tsvector` + GIN index, and implement ranking boosts.
+### Search (Phase 1: Postgres FTS + trigram)
+Blueprint-aligned (Blueprint §5).
+- Real Postgres `tsvector` stored on `Article.search_tsv` with GIN index
+- Tags included in the stored vector
+- Ranking boosts:
+  - base `ts_rank`
+  - editor-pick weight
+  - recency decay
+  - optional trending boost
+- Short TTL caching of search results (Redis-backed Django cache if available)
+- Maintenance:
+  - `backfill_search_tsv` command for backfill/repair
 
 ### SEO package
+Blueprint-aligned (Blueprint §6).
 - `robots.txt`
 - `sitemap.xml`
 - per-article canonical + JSON-LD (`Article`, `BreadcrumbList`)
 - Google News sitemap endpoint (backend)
 
+### Observability / safety
+- `GET /v1/health/` readiness endpoint (DB + cache best-effort)
+- Optional request timing logs when `REQUEST_LOGGING=1`
+
 ### Frontend
 - Home page lists published articles + search
-- Trending + Editor Picks (currently heuristic on the homepage UI)
+- Trending wired to backend editor-trending endpoint (403-safe)
 - Taxonomy browse pages (categories/authors/series/tags)
 - Article page renders markdown/html, widgets (`pull_quote`, `related_card`), tags
+
+---
+
+## Widgets schema (current)
+Blueprint §3 calls for a controlled widget manifest.
+
+Currently supported widget types:
+- `pull_quote`: `{ type: "pull_quote", text: string, attribution?: string | null }`
+- `related_card`: `{ type: "related_card", articleId: number }`
+
+Not yet implemented (blueprint items):
+- `youtube`
+- `gallery`
+- richer “video widget” metadata (Blueprint §8 “Video (important soon)”)
 
 ---
 
@@ -76,6 +103,7 @@ Blueprint-aligned: MinIO locally / R2 in production shape.
 
 ### Public API (read)
 Base: `/v1/`
+- `GET /health/`
 - `GET /articles/` (supports `?status=published`, `?category=<slug>`, `?tag=<slug>`)
 - `GET /articles/<slug>/` (published only unless `?preview_token=...`)
 - `GET /search/?q=...`
@@ -85,9 +113,23 @@ Base: `/v1/`
 
 ### Editorial API (session auth)
 Base: `/v1/editor/`
-- Workflow endpoints for drafts/review/schedule/publish
-- `POST /media/upload/`
-- `GET /trending/`
+- Articles:
+  - `GET /articles/`
+  - `POST /articles/` (create draft)
+  - `GET /articles/<id>/`
+  - `PATCH /articles/<id>/`
+  - `POST /articles/<id>/submit/`
+  - `POST /articles/<id>/approve/`
+  - `POST /articles/<id>/schedule/`
+  - `POST /articles/<id>/publish_now/`
+  - `POST /articles/<id>/preview_token/`
+  - `POST /articles/<id>/generate_og/`
+- Taxonomy:
+  - `GET/POST/DELETE /categories/`, `/authors/`, `/series/`, `/tags/`
+- Media:
+  - `POST /media/upload/`
+- Analytics:
+  - `GET /trending/`
 
 ---
 
@@ -114,6 +156,19 @@ Seed demo content:
 
 ---
 
+## Housekeeping / cron
+Blueprint §1 and §10 recommend using cron for scheduled jobs (instead of Celery Beat in production).
+
+Suggested cron jobs (Render Cron or equivalent):
+- Publish due posts:
+  - `python manage.py publish_due_posts`
+- Retention:
+  - `python manage.py prune_events --days 90`
+- Search maintenance (optional):
+  - `python manage.py backfill_search_tsv --only-missing`
+
+---
+
 ## Debugging notes
 - Next.js server components fetching `/v1/...` need absolute URLs. See:
   - `infra/docs/debugging-nextjs-fetch-and-proxy.md`
@@ -122,20 +177,10 @@ Seed demo content:
 
 ## Next steps (planned / backlog)
 
-### Backend hardening (do next, in order)
-1) **Events endpoint abuse protection**
-   - Add DRF throttling for `POST /v1/events/pageview/` and `POST /v1/events/read/`
-   - Validate payloads (max lengths; `read_ratio` 0..1)
-2) **Event retention / pruning**
-   - Add a management command (cron-friendly) to prune old `Event` rows (e.g. keep 60–90 days)
-3) **Search robustness**
-   - Ensure `search_tsv` is consistently materialized for published content (backfill job / periodic maintenance)
-4) **Health/observability**
-   - Add a minimal `GET /v1/health/` (DB + cache connectivity)
-   - Improve request logging for key endpoints
-5) **Production safety guards**
-   - Ensure filesystem media fallback is disabled outside dev (enforce `MEDIA_USE_S3=1` semantics)
+### From `Final PoC Blueprint` (highest leverage for frontend next)
+- **Curated homepage modules (Aeon-like)**: public + editor APIs to define slots/sections
+- **Video widget (embeds + metadata)**: widget schema + rendering support
 
-### From `Final PoC Blueprint` (remaining / ongoing)
-- Better curated homepage modules (Aeon-like)
-- Video widget (embeds + metadata)
+### Additional backend ergonomics (nice-to-have)
+- Return absolute media URLs in API responses (`og_image_url`, `hero_media_urls`, etc.)
+- `/v1/me/` session auth helper endpoint
