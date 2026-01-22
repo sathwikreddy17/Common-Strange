@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -50,19 +51,29 @@ type PublicArticleDetail = {
 };
 
 // Use same-origin proxy to avoid Docker DNS/CORS issues.
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const API_BASE = "";
 
-function apiUrl(path: string) {
-  if (API_BASE) return `${API_BASE}${path}`;
+async function getOriginForServerFetch(): Promise<string> {
+  // In Next.js server components, Node's fetch requires an absolute URL.
+  // Build it from the incoming request headers so it works in Docker and locally.
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  return `${proto}://${host}`;
+}
+
+function apiUrl(path: string, origin?: string) {
+  // On the server we must use an absolute URL; in the browser a relative URL is fine.
+  if (origin) return `${origin}${path}`;
   return path;
 }
 
 async function fetchArticle(slug: string, previewToken?: string): Promise<PublicArticleDetail | null> {
-  const url = new URL(apiUrl(`/v1/articles/${encodeURIComponent(slug)}/`), SITE_URL);
-  if (previewToken) url.searchParams.set("preview_token", previewToken);
+  const origin = await getOriginForServerFetch();
+  const url = apiUrl(`/v1/articles/${encodeURIComponent(slug)}/`, origin);
+  const fullUrl = previewToken ? `${url}?preview_token=${encodeURIComponent(previewToken)}` : url;
 
-  const res = await fetch(url.toString(), {
+  const res = await fetch(fullUrl, {
     next: { revalidate: 60 },
   });
 
@@ -73,10 +84,8 @@ async function fetchArticle(slug: string, previewToken?: string): Promise<Public
 }
 
 async function fetchRelatedArticleById(id: number): Promise<PublicArticleListItem | null> {
-  // PoC-friendly approach: use list endpoint and find by id.
-  // (We can add a dedicated endpoint later if needed.)
-  const url = new URL(apiUrl(`/v1/articles/`), SITE_URL);
-  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
+  const origin = await getOriginForServerFetch();
+  const res = await fetch(apiUrl(`/v1/articles/`, origin), { next: { revalidate: 60 } });
   if (!res.ok) return null;
   const items = (await res.json()) as PublicArticleListItem[];
   return items.find((x) => x.id === id) ?? null;
@@ -141,10 +150,8 @@ export async function generateMetadata({
   const article = await fetchArticle(slug, preview_token);
   if (!article) return {};
 
-  const canonical = `${SITE_URL}/${encodeURIComponent(article.slug)}`;
-  const ogImageUrl = article.og_image_key
-    ? `${SITE_URL}/v1/media/${encodeURIComponent(article.og_image_key)}`
-    : undefined;
+  const canonical = `/${encodeURIComponent(article.slug)}`;
+  const ogImageUrl = article.og_image_key ? `/v1/media/${encodeURIComponent(article.og_image_key)}` : undefined;
 
   return {
     title: `${article.title} | Common Strange`,
@@ -185,7 +192,7 @@ export default async function ArticlePage({
   const article = await fetchArticle(slug, previewToken);
   if (!article) notFound();
 
-  const canonicalUrl = `${SITE_URL}/${encodeURIComponent(article.slug)}`;
+  const canonicalUrl = `/${encodeURIComponent(article.slug)}`;
   const publishedTime = article.published_at ?? undefined;
   const modifiedTime = article.updated_at ?? undefined;
 
@@ -210,7 +217,7 @@ export default async function ArticlePage({
         "@type": "ListItem",
         position: 1,
         name: "Home",
-        item: `${SITE_URL}/`,
+        item: `/`,
       },
       ...(article.category
         ? [
@@ -218,7 +225,7 @@ export default async function ArticlePage({
               "@type": "ListItem",
               position: 2,
               name: article.category.name,
-              item: `${SITE_URL}/?category=${encodeURIComponent(article.category.slug)}`,
+              item: `/?category=${encodeURIComponent(article.category.slug)}`,
             },
           ]
         : []),

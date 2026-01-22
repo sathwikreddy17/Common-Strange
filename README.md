@@ -13,127 +13,120 @@ When deciding the “next set of features”, always:
 
 If something is implemented that is **not** in the blueprint, document it as an explicit deviation (with rationale).
 
+---
+
 ## Monorepo structure
 - `frontend/` Next.js (Vercel)
 - `backend/` Django + DRF (Render)
 - `infra/` deployment blueprints/runbooks
 - `packages/` shared packages (currently placeholders for later extraction)
 
+---
+
 ## Current status (implemented)
 
-### Publishing spine (PoC1)
-- **Workflow**: Draft  In Review  Scheduled  Published
-- **Preview tokens**: fetch drafts via `?preview_token=...` (24h TTL)
-- **Revision snapshots**: `ArticleVersion` snapshots created on key transitions
-- **Scheduled publish**: cron-compatible management command `publish_due_posts`
+### Publishing spine (workflow)
+- Mandatory review workflow: `DRAFT → IN_REVIEW → SCHEDULED → PUBLISHED → ARCHIVED`
+- Preview tokens for draft review (`?preview_token=...`, 24h TTL)
+- Revision snapshots via `ArticleVersion` on key transitions
+- Scheduled publish command: `publish_due_posts` (cron-friendly)
 
-### Public API (Django/DRF)
+### Media pipeline (S3-compatible, stateless)
+Blueprint-aligned: MinIO locally / R2 in production shape.
+- S3-compatible storage abstraction (`backend/content/storage.py`)
+- Editor upload endpoint: `POST /v1/editor/media/upload/`
+- Image variants generated as WebP (thumb/medium/large)
+- Public media proxy endpoint: `GET /v1/media/<key>` (works for local filesystem fallback + S3)
+
+### Social growth (publish-time OG images)
+- OG PNG generated at publish time and stored in object storage (`og/<slug>.png`)
+- Celery task: `generate_og_image_for_article(article_id)`
+- Publish cron enqueues OG generation after publishing
+
+### Events + trending foundation
+- `Event` model for `pageview` and `read` events
+- Public endpoints:
+  - `POST /v1/events/pageview/`
+  - `POST /v1/events/read/`
+- Editorial endpoint:
+  - `GET /v1/editor/trending/` (last-24h pageviews)
+
+### Search (Phase 1 partial)
+- Postgres FTS query includes tags in the vector
+- `pg_trgm` enabled
+- Trigram GIN indexes on `content_article.title` and `content_article.slug`
+
+> Remaining for blueprint parity: migrate `Article.search_tsv` from TextField → real `tsvector` + GIN index, and implement ranking boosts.
+
+### SEO package
+- `robots.txt`
+- `sitemap.xml`
+- per-article canonical + JSON-LD (`Article`, `BreadcrumbList`)
+- Google News sitemap endpoint (backend)
+
+### Frontend
+- Home page lists published articles + search
+- Trending + Editor Picks (currently heuristic on the homepage UI)
+- Taxonomy browse pages (categories/authors/series/tags)
+- Article page renders markdown/html, widgets (`pull_quote`, `related_card`), tags
+
+---
+
+## Key endpoints
+
+### Public API (read)
 Base: `/v1/`
-
-- Articles:
-  - `GET /articles/` (supports `?status=published`, `?category=<slug>`, `?tag=<slug>`)
-  - `GET /articles/<slug>/` (published only unless `?preview_token=...`)
-  - `GET /search/?q=...` (published only)
-
-- Categories:
-  - `GET /categories/`
-  - `GET /categories/<slug>/articles/`
-
-- Authors:
-  - `GET /authors/`
-  - `GET /authors/<slug>/`
-  - `GET /authors/<slug>/articles/`
-
-- Series:
-  - `GET /series/`
-  - `GET /series/<slug>/`
-  - `GET /series/<slug>/articles/`
-
-- Tags:
-  - `GET /tags/`
-  - `GET /tags/<slug>/articles/`
+- `GET /articles/` (supports `?status=published`, `?category=<slug>`, `?tag=<slug>`)
+- `GET /articles/<slug>/` (published only unless `?preview_token=...`)
+- `GET /search/?q=...`
+- `GET /media/<key>`
+- `POST /events/pageview/`
+- `POST /events/read/`
 
 ### Editorial API (session auth)
 Base: `/v1/editor/`
+- Workflow endpoints for drafts/review/schedule/publish
+- `POST /media/upload/`
+- `GET /trending/`
 
-- Articles:
-  - `POST /articles/` create draft
-  - `PATCH /articles/<id>/` update
-  - `POST /articles/<id>/submit/`
-  - `POST /articles/<id>/approve/`
-  - `POST /articles/<id>/schedule/` body: `{ "publish_at": "ISO8601" }`
-  - `POST /articles/<id>/publish_now/`
-  - `GET /articles/<id>/preview_token/`
+---
 
-- Taxonomy (Editor-only):
-  - `GET|POST /categories/`
-  - `GET|PATCH|DELETE /categories/<slug>/`
-  - `GET|POST /authors/`
-  - `GET|PATCH|DELETE /authors/<slug>/`
-  - `GET|POST /series/`
-  - `GET|PATCH|DELETE /series/<slug>/`
-  - `GET|POST /tags/`
-  - `GET|PATCH|DELETE /tags/<slug>/`
-
-### Frontend (Next.js)
-- Home page lists **published** articles.
-- Search bar uses `/v1/search?q=...`.
-- Home page includes basic **Trending** + **Editor Picks** sections (PoC heuristics).
-- Browsing pages:
-  - `/categories` + `/categories/[slug]`
-  - `/authors` + `/authors/[slug]`
-  - `/series` + `/series/[slug]`
-  - `/tags` + `/tags/[slug]`
-- Article page supports **preview tokens**.
-- Widgets implemented (PoC1): `pull_quote`, `related_card`.
-- SEO basics implemented:
-  - `robots.txt` via `src/app/robots.ts`
-  - `sitemap.xml` via `src/app/sitemap.ts`
-  - per-article canonical + JSON-LD (`Article`, `BreadcrumbList`)
-
-## Local dev
+## Local dev (Docker)
 
 ### Prereqs
 - Docker + Docker Compose
 
 ### Environment files
-Copy the example env files and adjust as needed:
-- `backend/.env.local.example`  `backend/.env.local`
-- `frontend/.env.local.example`  `frontend/.env.local`
+- `backend/.env.local` (Django/Celery/MinIO)
+- `frontend/.env.local` (Next.js)
 
 ### Run
-Use the root `Makefile`:
 - `make dev`
+
+Migrations:
 - `make migrate`
+
+Create admin user:
 - `make createsuperuser`
 
-Seed demo content (optional):
+Seed demo content:
 - `docker compose run --rm backend python manage.py seed_demo_content`
 
-## Lessons learned (debugging)
+---
 
-### 1) CORS settings require the package in the container
-If `corsheaders` is enabled in `INSTALLED_APPS` but `django-cors-headers` is not installed in the image, Django will crash at startup with:
-`ModuleNotFoundError: No module named 'corsheaders'`.
+## Debugging notes
+- Next.js server components fetching `/v1/...` need absolute URLs. See:
+  - `infra/docs/debugging-nextjs-fetch-and-proxy.md`
 
-Fix: ensure `django-cors-headers` is listed in `backend/requirements.txt` and rebuild the backend image.
+---
 
-### 2) Do not redirect Next.js internal assets (`/_next/*`)
-Redirecting `/_next/*` to the backend breaks the frontend (browser cannot load JS/CSS) and you will see errors like:
-- `Failed to load resource: A server with the specified hostname could not be found` (e.g. `http://backend:8000/...`)
-
-Fix: `frontend/src/middleware.ts` must **not** match or redirect `/_next/*`.
-
-### 3) Compose networking: browser vs container hostnames
-Inside Docker, services can reach each other via `http://backend:8000`, but the **host browser cannot resolve** `backend`.
-
-Fix: the frontend now provides a **same-origin proxy** route:
-- `frontend/src/app/v1/[[...path]]/route.ts`
-
-The browser calls `http://localhost:3000/v1/...` and Next forwards to the backend service internally.
-
-## Next steps (planned)
-- Richer public discovery (editor picks, events, trending)
-- Media/OG image pipeline
-- Video widget
-- Google News sitemap
+## Next steps (planned / backlog)
+From `Final PoC Blueprint`:
+- Search Phase 1 completion:
+  - `tsvector` column + GIN index; update on publish/edit
+  - boosting: editor pick weight, recency decay, trending score from events
+  - caching (short TTL)
+- Frontend event emission (pageview/read) and using real trending
+- “Never store media on filesystem” hardening for production (disable local filesystem fallback outside dev)
+- Video widget (embeds + metadata)
+- Better curated homepage modules (Aeon-like)
