@@ -102,10 +102,10 @@ function PullQuote({ widget }: { widget: PullQuoteWidget }) {
 
 function RelatedCard({ related }: { related: PublicArticleListItem }) {
   return (
-    <aside className="my-10 rounded-2xl border border-zinc-200 p-6">
-      <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">Related</div>
-      <Link className="mt-2 block hover:underline" href={`/${related.slug}`}>
-        <div className="text-lg font-semibold text-zinc-900">{related.title}</div>
+    <aside className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Related</div>
+      <Link className="mt-3 block" href={`/${related.slug}`}>
+        <div className="text-base font-semibold text-zinc-900 hover:underline">{related.title}</div>
         {related.dek ? <div className="mt-1 text-sm text-zinc-600">{related.dek}</div> : null}
       </Link>
     </aside>
@@ -171,6 +171,16 @@ export async function generateMetadata({
   };
 }
 
+function formatDateShort(iso: string): string {
+  // Avoid locale surprises like mm/dd vs dd/mm by sticking to a stable, readable format.
+  // Example: Jan 22, 2026
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
+
 export default async function ArticlePage({
   params,
   searchParams,
@@ -200,21 +210,14 @@ export default async function ArticlePage({
     datePublished: publishedTime,
     dateModified: modifiedTime,
     mainEntityOfPage: canonicalUrl,
-    author: article.authors?.length
-      ? article.authors.map((a) => ({ "@type": "Person", name: a.name }))
-      : undefined,
+    author: article.authors?.length ? article.authors.map((a) => ({ "@type": "Person", name: a.name })) : undefined,
   };
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: `/`,
-      },
+      { "@type": "ListItem", position: 1, name: "Home", item: `/` },
       ...(article.category
         ? [
             {
@@ -245,68 +248,87 @@ export default async function ArticlePage({
     if (maybe) relatedById.set(id, maybe);
   }
 
+  const relatedCards = relatedCardWidgets
+    .map((w) => relatedById.get(w.articleId))
+    .filter(Boolean) as PublicArticleListItem[];
+
+  const hasSidebar = relatedCards.length > 0 || (article.tags?.length ?? 0) > 0;
+
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <main className="mx-auto max-w-6xl px-6 py-14">
       {/* Blueprint: emit pageview/read events */}
       <ArticleEvents slug={article.slug} />
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
-      <div className="mb-8">
+      <div className="mb-10">
         <Link className="text-sm text-zinc-600 hover:underline" href="/">
-          Back
+          ← Back
         </Link>
       </div>
 
-      <article>
-        <header className="mb-10">
-          <h1 className="text-4xl font-semibold tracking-tight">{article.title}</h1>
-          {article.dek ? <p className="mt-4 text-lg text-zinc-700">{article.dek}</p> : null}
-          <div className="mt-4 text-sm text-zinc-500">
-            {article.category ? (
-              <Link className="hover:underline" href={`/categories/${article.category.slug}`}>
-                {article.category.name}
-              </Link>
-            ) : null}
-            {article.category && article.authors.length ? <span>  b7 </span> : null}
-            {article.authors.length ? (
-              <span>{article.authors.map((x) => x.name).join(", ")}</span>
-            ) : null}
-          </div>
-        </header>
+      <div className={hasSidebar ? "grid gap-12 lg:grid-cols-[1fr_320px]" : ""}>
+        <article className="min-w-0">
+          <header className="mb-10">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {article.series ? (
+                <Link
+                  href={`/series/${article.series.slug}`}
+                  className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Series: {article.series.name}
+                </Link>
+              ) : null}
 
-        {article.body_html ? (
-          <section
-            className="prose prose-zinc max-w-none"
-            // body_html is rendered server-side with escaping enabled
-            dangerouslySetInnerHTML={{ __html: article.body_html }}
-          />
-        ) : article.body_md ? (
-          <pre className="whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50 p-5 text-sm">
-            {article.body_md}
-          </pre>
-        ) : (
-          <p className="text-zinc-600">(No body yet)</p>
-        )}
+              {article.category ? (
+                <Link
+                  href={`/categories/${article.category.slug}`}
+                  className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  {article.category.name}
+                </Link>
+              ) : null}
+            </div>
 
-        {widgets.length ? (
-          <section className="mt-10">
-            {widgets.map((w, idx) => {
-              if (w.type === "pull_quote") {
-                return <PullQuote key={idx} widget={w} />;
-              }
-              if (w.type === "related_card") {
-                const related = relatedById.get(w.articleId);
-                return related ? (
-                  <RelatedCard key={idx} related={related} />
-                ) : (
+            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 md:text-5xl">{article.title}</h1>
+            {article.dek ? <p className="mt-4 text-lg leading-relaxed text-zinc-700">{article.dek}</p> : null}
+
+            <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500">
+              {article.authors.length ? <span>{article.authors.map((x) => x.name).join(", ")}</span> : null}
+              {publishedTime ? (
+                <>
+                  {article.authors.length ? <span aria-hidden>·</span> : null}
+                  <time dateTime={publishedTime}>Published {formatDateShort(publishedTime)}</time>
+                </>
+              ) : null}
+            </div>
+          </header>
+
+          {article.body_html ? (
+            <section
+              className="prose prose-zinc max-w-none lg:prose-lg"
+              // body_html is rendered server-side with escaping enabled
+              dangerouslySetInnerHTML={{ __html: article.body_html }}
+            />
+          ) : article.body_md ? (
+            <pre className="whitespace-pre-wrap rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm">
+              {article.body_md}
+            </pre>
+          ) : (
+            <p className="text-zinc-600">(No body yet)</p>
+          )}
+
+          {widgets.length ? (
+            <section className="mt-12">
+              {widgets.map((w, idx) => {
+                if (w.type === "pull_quote") {
+                  return <PullQuote key={idx} widget={w} />;
+                }
+                // related cards are rendered in the sidebar; keep unknown widgets visible for debugging.
+                if (w.type === "related_card") return null;
+
+                return (
                   <pre
                     key={idx}
                     className="my-10 whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50 p-5 text-sm"
@@ -314,42 +336,43 @@ export default async function ArticlePage({
                     {JSON.stringify(w, null, 2)}
                   </pre>
                 );
-              }
-              return (
-                <pre
-                  key={idx}
-                  className="my-10 whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50 p-5 text-sm"
-                >
-                  {JSON.stringify(w, null, 2)}
-                </pre>
-              );
-            })}
-          </section>
-        ) : null}
-      </article>
+              })}
+            </section>
+          ) : null}
+        </article>
 
-      {/* meta row */}
-      <div className="mt-8 text-sm text-zinc-500">
-        {article.category ? (
-          <Link className="hover:underline" href={`/categories/${article.category.slug}`}>
-            {article.category.name}
-          </Link>
-        ) : null}
+        {hasSidebar ? (
+          <aside className="space-y-6">
+            {article.tags && article.tags.length ? (
+              <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Tags</h2>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {article.tags.map((t) => (
+                    <Link
+                      key={t.slug}
+                      href={`/tags/${t.slug}`}
+                      className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
+                    >
+                      #{t.name}
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
-        {article.tags && article.tags.length ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {article.tags.map((t) => (
-              <Link
-                key={t.slug}
-                href={`/tags/${t.slug}`}
-                className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
-              >
-                #{t.name}
-              </Link>
-            ))}
-          </div>
+            {relatedCards.length ? (
+              <section className="space-y-3">
+                {relatedCards.map((r) => (
+                  <RelatedCard key={r.slug} related={r} />
+                ))}
+              </section>
+            ) : null}
+          </aside>
         ) : null}
       </div>
+
+      {/* footer meta */}
+      {modifiedTime ? <div className="mt-10 text-xs text-zinc-500">Updated {formatDateShort(modifiedTime)}</div> : null}
     </main>
   );
 }
