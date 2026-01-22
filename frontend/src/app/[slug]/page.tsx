@@ -146,18 +146,23 @@ export async function generateMetadata({
   const article = await fetchArticle(slug, preview_token);
   if (!article) return {};
 
-  const canonical = `/${encodeURIComponent(article.slug)}`;
-  const ogImageUrl = article.og_image_key ? `/v1/media/${encodeURIComponent(article.og_image_key)}` : undefined;
+  const origin = await getOriginForServerFetch();
+  const canonicalPath = `/${encodeURIComponent(article.slug)}`;
+  const canonicalUrl = `${origin}${canonicalPath}`;
+
+  const ogImageUrl = article.og_image_key
+    ? `${origin}/v1/media/${encodeURIComponent(article.og_image_key)}`
+    : undefined;
 
   return {
     title: `${article.title} | Common Strange`,
     description: article.dek || undefined,
     alternates: {
-      canonical,
+      canonical: canonicalUrl,
     },
     openGraph: {
       type: "article",
-      url: canonical,
+      url: canonicalUrl,
       title: article.title,
       description: article.dek || undefined,
       images: ogImageUrl ? [{ url: ogImageUrl }] : undefined,
@@ -198,33 +203,39 @@ export default async function ArticlePage({
   const article = await fetchArticle(slug, previewToken);
   if (!article) notFound();
 
-  const canonicalUrl = `/${encodeURIComponent(article.slug)}`;
+  const origin = await getOriginForServerFetch();
+  const canonicalPath = `/${encodeURIComponent(article.slug)}`;
+  const canonicalUrl = `${origin}${canonicalPath}`;
   const publishedTime = article.published_at ?? undefined;
   const modifiedTime = article.updated_at ?? undefined;
 
   const articleJsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
+    mainEntityOfPage: canonicalUrl,
     headline: article.title,
     description: article.dek || undefined,
     datePublished: publishedTime,
     dateModified: modifiedTime,
-    mainEntityOfPage: canonicalUrl,
     author: article.authors?.length ? article.authors.map((a) => ({ "@type": "Person", name: a.name })) : undefined,
+    publisher: {
+      "@type": "Organization",
+      name: "Common Strange",
+    },
   };
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: `/` },
+      { "@type": "ListItem", position: 1, name: "Home", item: `${origin}/` },
       ...(article.category
         ? [
             {
               "@type": "ListItem",
               position: 2,
               name: article.category.name,
-              item: `/?category=${encodeURIComponent(article.category.slug)}`,
+              item: `${origin}/?category=${encodeURIComponent(article.category.slug)}`,
             },
           ]
         : []),
@@ -236,6 +247,9 @@ export default async function ArticlePage({
       },
     ],
   };
+
+  const shareUrl = canonicalUrl;
+  const shareTitle = article.title;
 
   const widgets = article.widgets_json?.widgets ?? [];
   const relatedCardWidgets = widgets.filter((w) => w.type === "related_card") as RelatedCardWidget[];
@@ -262,10 +276,29 @@ export default async function ArticlePage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
-      <div className="mb-10">
+      <div className="mb-10 flex items-center justify-between gap-4">
         <Link className="text-sm text-zinc-600 hover:underline" href="/">
           ← Back
         </Link>
+
+        <div className="flex items-center gap-2">
+          <a
+            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(
+              shareUrl,
+            )}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Share
+          </a>
+          <a
+            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            href={`mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareUrl)}`}
+          >
+            Email
+          </a>
+        </div>
       </div>
 
       <div className={hasSidebar ? "grid gap-12 lg:grid-cols-[1fr_320px]" : ""}>
