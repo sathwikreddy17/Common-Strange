@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import ArticleCard, { type ArticleCardItem } from "@/components/ArticleCard";
 
 // Use a same-origin proxy so this works both in Docker and non-Docker.
 const API_BASE = "";
@@ -103,28 +104,6 @@ function getFallbackModules(articles: PublicArticleListItem[]) {
   const trending = [...articles].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 3);
   const editorPicks = articles.slice(0, 3);
   return { trending, editorPicks };
-}
-
-function ArticleCard({ a }: { a: PublicArticleListItem }) {
-  return (
-    <li className="group rounded-2xl border border-zinc-200 bg-white p-5 transition hover:border-zinc-300">
-      <h3 className="text-lg font-semibold tracking-tight text-zinc-900">
-        <Link className="hover:underline" href={`/${a.slug}`}>
-          {a.title}
-        </Link>
-      </h3>
-      {a.dek ? <p className="mt-2 text-sm leading-relaxed text-zinc-600">{a.dek}</p> : null}
-      <div className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-xs text-zinc-500">
-        {a.category ? (
-          <Link className="hover:underline" href={`/categories/${a.category.slug}`}>
-            {a.category.name}
-          </Link>
-        ) : null}
-        {a.category && a.authors.length ? <span>·</span> : null}
-        {a.authors.length ? <span>{a.authors.map((x) => x.name).join(", ")}</span> : null}
-      </div>
-    </li>
-  );
 }
 
 export default function Home() {
@@ -246,7 +225,19 @@ export default function Home() {
             ) : (
               <ul className="space-y-4">
                 {feed.map((a) => (
-                  <ArticleCard key={a.slug} a={a} />
+                  <ArticleCard
+                    key={a.slug}
+                    a={
+                      {
+                        title: a.title,
+                        slug: a.slug,
+                        dek: a.dek,
+                        category: a.category ? { name: a.category.name, slug: a.category.slug } : null,
+                        series: a.series ? { name: a.series.name, slug: a.series.slug } : null,
+                        authors: a.authors?.map((x) => ({ name: x.name, slug: x.slug })),
+                      } satisfies ArticleCardItem
+                    }
+                  />
                 ))}
               </ul>
             )}

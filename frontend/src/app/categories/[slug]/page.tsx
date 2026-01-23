@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import ArticleCard, { type ArticleCardItem } from "@/components/ArticleCard";
+import TaxonomyNav from "@/components/TaxonomyNav";
 
 type Category = {
   name: string;
@@ -101,15 +103,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
             {category.description ? <p className="mt-2 max-w-2xl text-zinc-600">{category.description}</p> : null}
           </div>
 
-          <nav className="text-sm text-zinc-600">
-            <Link className="hover:underline" href="/tags">
-              Tags
-            </Link>
-            <span className="px-2">·</span>
-            <Link className="hover:underline" href="/series">
-              Series
-            </Link>
-          </nav>
+          <TaxonomyNav />
         </div>
       </header>
 
@@ -118,26 +112,19 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       ) : (
         <ul className="space-y-4">
           {articles.map((a) => (
-            <li key={a.slug} className="rounded-2xl border border-zinc-200 bg-white p-6">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
-                {a.series ? (
-                  <Link className="hover:underline" href={`/series/${a.series.slug}`}>
-                    {a.series.name}
-                  </Link>
-                ) : null}
-                {a.series ? <span aria-hidden>·</span> : null}
-                {a.authors.length ? (
-                  <span className="truncate">{a.authors.map((x) => x.name).join(", ")}</span>
-                ) : null}
-              </div>
-
-              <h2 className="mt-2 text-xl font-semibold text-zinc-900">
-                <Link className="hover:underline" href={`/${a.slug}`}>
-                  {a.title}
-                </Link>
-              </h2>
-              {a.dek ? <p className="mt-2 text-zinc-700">{a.dek}</p> : null}
-            </li>
+            <ArticleCard
+              key={a.slug}
+              a={
+                {
+                  title: a.title,
+                  slug: a.slug,
+                  dek: a.dek,
+                  category: a.category ? { name: a.category.name, slug: a.category.slug } : null,
+                  series: a.series ? { name: a.series.name, slug: a.series.slug } : null,
+                  authors: a.authors?.map((x) => ({ name: x.name, slug: x.slug })),
+                } satisfies ArticleCardItem
+              }
+            />
           ))}
         </ul>
       )}
