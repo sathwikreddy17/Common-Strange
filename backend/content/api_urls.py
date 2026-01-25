@@ -1,11 +1,11 @@
 from django.urls import include, path
 
 from . import views
-from .events_views import EditorTrendingView, PageviewEventView, ReadEventView
+from .events_views import EditorTrendingView, PageviewEventView, PublicTrendingView, ReadEventView
 from .health_views import HealthView
 from .news_sitemap import google_news_sitemap
 from .og_views import PublicMediaView
-from .media_views import EditorMediaUploadView
+from .media_views import EditorMediaUploadView, PublicMediaAssetDetailView, EditorMediaRecentView
 
 urlpatterns = [
     # Health
@@ -13,11 +13,27 @@ urlpatterns = [
 
     # Public (read-only)
     path("articles/", views.PublicArticleListView.as_view(), name="public-articles"),
+    path("articles/by-ids/", views.PublicArticlesByIdsView.as_view(), name="public-articles-by-ids"),
     path("articles/<slug:slug>/", views.PublicArticleDetailView.as_view(), name="public-article-detail"),
+
+    # Public curated modules (PoC 3)
+    path("home/modules/", views.PublicHomeModulesView.as_view(), name="public-home-modules"),
+    path("categories/<slug:slug>/modules/", views.PublicCategoryModulesView.as_view(), name="public-category-modules"),
+    path("series/<slug:slug>/modules/", views.PublicSeriesModulesView.as_view(), name="public-series-modules"),
+    path("authors/<slug:slug>/modules/", views.PublicAuthorModulesView.as_view(), name="public-author-modules"),
+
+    # Public trending (PoC 3)
+    path("trending/", PublicTrendingView.as_view(), name="public-trending"),
+
+    # Public media assets (read-only)
+    path("media-assets/<int:pk>/", PublicMediaAssetDetailView.as_view(), name="public-media-asset-detail"),
 
     # Events (public)
     path("events/pageview/", PageviewEventView.as_view(), name="events-pageview"),
     path("events/read/", ReadEventView.as_view(), name="events-read"),
+
+    # Search
+    path("search/", views.ArticleSearchView.as_view(), name="article-search"),
 
     path("categories/", views.CategoryListView.as_view(), name="categories"),
     path(
@@ -64,8 +80,18 @@ urlpatterns = [
                 path("articles/<int:pk>/preview_token/", views.EditorPreviewTokenView.as_view(), name="editor-article-preview-token"),
                 path("articles/<int:pk>/generate_og/", views.EditorGenerateOgImageView.as_view(), name="editor-article-generate-og"),
 
+                # Curated modules (Publisher)
+                path("modules/", views.EditorCuratedModuleListCreateView.as_view(), name="editor-modules"),
+                path("modules/<int:pk>/", views.EditorCuratedModuleDetailView.as_view(), name="editor-module-detail"),
+                path(
+                    "modules/<int:pk>/replace_items/",
+                    views.EditorCuratedModuleReplaceItemsView.as_view(),
+                    name="editor-module-replace-items",
+                ),
+
                 # Media
                 path("media/upload/", EditorMediaUploadView.as_view(), name="editor-media-upload"),
+                path("media/recent/", EditorMediaRecentView.as_view(), name="editor-media-recent"),
 
                 # Trending (editor-only)
                 path("trending/", EditorTrendingView.as_view(), name="editor-trending"),
@@ -98,8 +124,6 @@ urlpatterns = [
             ]
         ),
     ),
-
-    path("search/", views.ArticleSearchView.as_view(), name="article-search"),
 
     path("news-sitemap.xml", google_news_sitemap, name="google-news-sitemap"),
 ]

@@ -9,6 +9,7 @@ django-cors-headers>=4.3
 
 # DB
 psycopg[binary]>=3.1
+dj-database-url>=2.1
 
 # Config
 python-dotenv>=1.0
@@ -35,6 +36,15 @@ pydantic>=2.5
 
 # Markdown rendering (PoC1)
 mistune>=3.0,<4.0
+
+# HTML Sanitization (XSS prevention)
+bleach>=6.1
+
+# Structured logging
+python-json-logger>=2.0
+
+# Error tracking
+sentry-sdk[django,celery,redis]>=1.39
 
 # Lint
 ruff>=0.1

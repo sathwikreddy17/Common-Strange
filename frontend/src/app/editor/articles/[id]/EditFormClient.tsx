@@ -6,7 +6,14 @@ import WidgetsForm from "./widgets-form";
 
 type Widget =
   | { type: "pull_quote"; text: string; attribution?: string | null }
-  | { type: "related_card"; articleId: number };
+  | { type: "related_card"; articleId: number }
+  | { type: "youtube"; videoId: string; title?: string | null; caption?: string | null }
+  | { type: "gallery"; mediaIds: number[]; title?: string | null; caption?: string | null }
+  | { type: "image"; mediaId: number; altText?: string | null; caption?: string | null }
+  | { type: "embed"; provider: string; url: string; title?: string | null; caption?: string | null }
+  | { type: "callout"; variant: "note" | "tip" | "warning"; title?: string | null; text: string }
+  | { type: "heading"; level: 2 | 3 | 4; text: string }
+  | { type: "divider" };
 
 type SlugObj = { slug: string };
 
@@ -18,14 +25,39 @@ function isWidgetContainer(x: unknown): x is { widgets: unknown[] } {
   return !!x && typeof x === "object" && "widgets" in x && Array.isArray((x as { widgets?: unknown }).widgets);
 }
 
+function isObject(x: unknown): x is Record<string, unknown> {
+  return !!x && typeof x === "object";
+}
+
 function isWidget(x: unknown): x is Widget {
-  if (!x || typeof x !== "object" || !("type" in x)) return false;
-  const t = String((x as { type?: unknown }).type);
+  if (!isObject(x)) return false;
+  const t = x.type;
   if (t === "pull_quote") {
-    return typeof (x as { text?: unknown }).text === "string";
+    return typeof x.text === "string";
   }
   if (t === "related_card") {
-    return typeof (x as { articleId?: unknown }).articleId === "number";
+    return typeof x.articleId === "number";
+  }
+  if (t === "youtube") {
+    return typeof x.videoId === "string";
+  }
+  if (t === "gallery") {
+    return Array.isArray(x.mediaIds);
+  }
+  if (t === "image") {
+    return typeof x.mediaId === "number";
+  }
+  if (t === "embed") {
+    return typeof x.provider === "string" && typeof x.url === "string";
+  }
+  if (t === "callout") {
+    return typeof x.variant === "string" && typeof x.text === "string";
+  }
+  if (t === "heading") {
+    return (x.level === 2 || x.level === 3 || x.level === 4) && typeof x.text === "string";
+  }
+  if (t === "divider") {
+    return true;
   }
   return false;
 }

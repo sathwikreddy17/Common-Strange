@@ -105,3 +105,56 @@ class EditorTrendingView(APIView):
                 for a in qs
             ]
         )
+
+
+class PublicTrendingView(APIView):
+    """Public trending endpoint with caching.
+
+    Returns top articles by views in the last 24 hours.
+    Blueprint PoC 3: expose trending to public for homepage.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.core.cache import cache
+
+        cache_key = "public:trending:24h"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        since = timezone.now() - timezone.timedelta(hours=24)
+        limit = min(int(request.query_params.get("limit", 10)), 20)
+
+        qs = (
+            Article.objects.filter(status=ArticleStatus.PUBLISHED)
+            .select_related("category")
+            .prefetch_related("authors")
+            .annotate(
+                views_24h=models.Count(
+                    "events",
+                    filter=models.Q(events__kind=EventKind.PAGEVIEW, events__created_at__gte=since),
+                )
+            )
+            .filter(views_24h__gt=0)
+            .order_by("-views_24h", "-published_at")[:limit]
+        )
+
+        result = [
+            {
+                "id": a.id,
+                "slug": a.slug,
+                "title": a.title,
+                "dek": a.dek,
+                "category": {"name": a.category.name, "slug": a.category.slug} if a.category else None,
+                "authors": [{"name": au.name, "slug": au.slug} for au in a.authors.all()],
+                "published_at": a.published_at.isoformat() if a.published_at else None,
+            }
+            for a in qs
+        ]
+
+        # Cache for 5 minutes
+        cache.set(cache_key, result, timeout=300)
+
+        return Response(result)

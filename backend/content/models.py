@@ -252,3 +252,123 @@ class Event(models.Model):
             models.Index(fields=["kind", "created_at"]),
             models.Index(fields=["article", "created_at"]),
         ]
+
+
+# ---
+# Curated modules (PoC 3)
+# ---
+
+
+class CuratedPlacement(models.TextChoices):
+    HOME = "HOME", "Home"
+    CATEGORY = "CATEGORY", "Category"
+    SERIES = "SERIES", "Series"
+    AUTHOR = "AUTHOR", "Author"
+
+
+class CuratedModule(models.Model):
+    """A curated module slot for Home or hubs.
+
+    Blueprint: "Home: dynamic modules" and "Hubs: curated modules (Aeon-like)".
+
+    Notes:
+    - We keep the module schema intentionally small for PoC 3.
+    - Visibility is controlled by an optional publish window.
+    """
+
+    placement = models.CharField(max_length=20, choices=CuratedPlacement.choices, default=CuratedPlacement.HOME)
+
+    # Optional scoping for hub pages
+    category = models.ForeignKey("Category", null=True, blank=True, on_delete=models.CASCADE)
+    series = models.ForeignKey("Series", null=True, blank=True, on_delete=models.CASCADE)
+    author = models.ForeignKey("Author", null=True, blank=True, on_delete=models.CASCADE)
+
+    title = models.CharField(max_length=200, blank=True, default="")
+    subtitle = models.CharField(max_length=500, blank=True, default="")
+
+    order = models.IntegerField(default=0)
+
+    publish_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["placement", "order"]),
+            models.Index(fields=["placement", "is_active"]),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        # Enforce scoping rules.
+        if self.placement == CuratedPlacement.HOME:
+            if self.category_id or self.series_id or self.author_id:
+                raise ValidationError("Home modules cannot be scoped to a single hub.")
+        elif self.placement == CuratedPlacement.CATEGORY:
+            if not self.category_id or self.series_id or self.author_id:
+                raise ValidationError("Category modules must set category only.")
+        elif self.placement == CuratedPlacement.SERIES:
+            if not self.series_id or self.category_id or self.author_id:
+                raise ValidationError("Series modules must set series only.")
+        elif self.placement == CuratedPlacement.AUTHOR:
+            if not self.author_id or self.category_id or self.series_id:
+                raise ValidationError("Author modules must set author only.")
+
+        if self.publish_at and self.expires_at and self.expires_at <= self.publish_at:
+            raise ValidationError("expires_at must be after publish_at")
+
+
+class CuratedItemType(models.TextChoices):
+    ARTICLE = "ARTICLE", "Article"
+    CATEGORY = "CATEGORY", "Category"
+    SERIES = "SERIES", "Series"
+    AUTHOR = "AUTHOR", "Author"
+
+
+class CuratedModuleItem(models.Model):
+    """An ordered item within a module.
+
+    PoC: primarily used for ARTICLE picks, but supports linking to hubs.
+    """
+
+    module = models.ForeignKey(CuratedModule, on_delete=models.CASCADE, related_name="items")
+    order = models.IntegerField(default=0)
+
+    item_type = models.CharField(max_length=20, choices=CuratedItemType.choices, default=CuratedItemType.ARTICLE)
+
+    article = models.ForeignKey("Article", null=True, blank=True, on_delete=models.CASCADE)
+    category = models.ForeignKey("Category", null=True, blank=True, on_delete=models.CASCADE)
+    series = models.ForeignKey("Series", null=True, blank=True, on_delete=models.CASCADE)
+    author = models.ForeignKey("Author", null=True, blank=True, on_delete=models.CASCADE)
+
+    # Optional override copy
+    override_title = models.CharField(max_length=250, blank=True, default="")
+    override_dek = models.CharField(max_length=500, blank=True, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["module", "order"]) ]
+
+    def clean(self):
+        super().clean()
+
+        refs = {
+            CuratedItemType.ARTICLE: self.article_id,
+            CuratedItemType.CATEGORY: self.category_id,
+            CuratedItemType.SERIES: self.series_id,
+            CuratedItemType.AUTHOR: self.author_id,
+        }
+        expected = refs.get(self.item_type)
+        if not expected:
+            raise ValidationError(f"{self.item_type} items must set the corresponding foreign key")
+
+        # Ensure no other refs are set.
+        for t, val in refs.items():
+            if t != self.item_type and val:
+                raise ValidationError("Only one target (article/category/series/author) can be set")

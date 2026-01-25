@@ -37,6 +37,23 @@ function apiUrl(path: string) {
   return new URL(path, SITE_URL).toString();
 }
 
+type PaginatedResponse<T> = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+};
+
+function extractResults<T>(data: T[] | PaginatedResponse<T>): T[] {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && typeof data === 'object' && 'results' in data) {
+    return data.results;
+  }
+  return [];
+}
+
 async function fetchPublishedArticles(): Promise<PublicArticleListItem[]> {
   try {
     const res = await fetch(apiUrl(`/v1/articles/?status=published`), {
@@ -45,7 +62,8 @@ async function fetchPublishedArticles(): Promise<PublicArticleListItem[]> {
     });
 
     if (!res.ok) return [];
-    return (await res.json()) as PublicArticleListItem[];
+    const data = (await res.json()) as PublicArticleListItem[] | PaginatedResponse<PublicArticleListItem>;
+    return extractResults(data);
   } catch {
     // During `next build` the backend may not be reachable (e.g. in CI).
     return [];
@@ -56,7 +74,8 @@ async function fetchCategories(): Promise<Category[]> {
   try {
     const res = await fetch(apiUrl(`/v1/categories/`), { next: { revalidate: 3600 } });
     if (!res.ok) return [];
-    return (await res.json()) as Category[];
+    const data = (await res.json()) as Category[] | PaginatedResponse<Category>;
+    return extractResults(data);
   } catch {
     return [];
   }
@@ -66,7 +85,8 @@ async function fetchAuthors(): Promise<Author[]> {
   try {
     const res = await fetch(apiUrl(`/v1/authors/`), { next: { revalidate: 3600 } });
     if (!res.ok) return [];
-    return (await res.json()) as Author[];
+    const data = (await res.json()) as Author[] | PaginatedResponse<Author>;
+    return extractResults(data);
   } catch {
     return [];
   }
@@ -76,7 +96,8 @@ async function fetchSeries(): Promise<Series[]> {
   try {
     const res = await fetch(apiUrl(`/v1/series/`), { next: { revalidate: 3600 } });
     if (!res.ok) return [];
-    return (await res.json()) as Series[];
+    const data = (await res.json()) as Series[] | PaginatedResponse<Series>;
+    return extractResults(data);
   } catch {
     return [];
   }
@@ -86,7 +107,8 @@ async function fetchTags(): Promise<Tag[]> {
   try {
     const res = await fetch(apiUrl(`/v1/tags/`), { next: { revalidate: 3600 } });
     if (!res.ok) return [];
-    return (await res.json()) as Tag[];
+    const data = (await res.json()) as Tag[] | PaginatedResponse<Tag>;
+    return extractResults(data);
   } catch {
     return [];
   }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fetchList } from "@/lib/api";
 
 type Series = {
   name: string;
@@ -6,18 +7,8 @@ type Series = {
   description: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
-
 async function fetchSeries(): Promise<Series[]> {
-  try {
-    const res = await fetch(`${API_BASE}/v1/series/`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return [];
-    return (await res.json()) as Series[];
-  } catch {
-    return [];
-  }
+  return fetchList<Series>("/v1/series/", { next: { revalidate: 3600 } });
 }
 
 export default async function SeriesIndexPage() {

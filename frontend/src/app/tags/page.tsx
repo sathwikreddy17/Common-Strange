@@ -1,20 +1,13 @@
 import Link from "next/link";
+import { fetchList } from "@/lib/api";
 
 type Tag = {
   name: string;
   slug: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
-
 async function fetchTags(): Promise<Tag[]> {
-  try {
-    const res = await fetch(`${API_BASE}/v1/tags/`, { next: { revalidate: 3600 } });
-    if (!res.ok) return [];
-    return (await res.json()) as Tag[];
-  } catch {
-    return [];
-  }
+  return fetchList<Tag>("/v1/tags/", { next: { revalidate: 3600 } });
 }
 
 export default async function TagsIndexPage() {

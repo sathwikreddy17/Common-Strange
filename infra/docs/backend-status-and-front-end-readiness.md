@@ -17,36 +17,33 @@ All scope/priority is derived from `Final PoC Blueprint.txt`.
 - S3-compatible storage abstraction.
 - Local dev uses MinIO. Production shape assumes R2/Cloudflare.
 - Editor media upload endpoint produces WebP variants.
-- Publish-time OG image generation writes `og/<slug>.png` to object storage.
-- Production safety: filesystem media fallback is blocked outside `DEBUG` unless explicitly overridden.
+- Public media serving via `GET /v1/media/<key>`.
+- Public media metadata endpoint: `GET /v1/media-assets/<id>/`.
+- Editor helper endpoint: `GET /v1/editor/media/recent/?limit=...`.
+- Media API returns ready-to-use variant URLs (when keys exist):
+  - `thumb_url`, `medium_url`, `large_url`, `original_url`
 
 ### Events + trending (Blueprint §3 events)
 - Public ingestion endpoints for `pageview` and `read`.
 - Editor-only trending endpoint returns last-24h view counts.
-- Abuse protection: DRF scoped throttling enabled for events.
-- Retention: `python manage.py prune_events --days 90`.
 
 ### Search (Blueprint §5)
 - Stored `tsvector` (`Article.search_tsv`) with GIN index.
 - Tags included in vector.
-- Ranking boosts: editor pick, recency decay, optional trending.
-- Short TTL caching for queries.
-- Maintenance backfill command: `python manage.py backfill_search_tsv`.
 
 ### Health/observability
 - `GET /v1/health/` (DB + cache best-effort)
-- Optional request timing logs: enable with `REQUEST_LOGGING=1`
 
-## Frontend: known integration notes
-- Next.js server components must fetch absolute URLs (build origin from request headers); relative `/v1/...` fetches can fail in SSR.
-- The repo includes a same-origin `/v1/*` proxy route in Next.js for Docker/dev reliability.
+## Frontend: ready (current)
+- Next.js server components fetch with header-derived absolute origin where needed.
+- Same-origin `/v1/*` proxy route exists for Docker/dev reliability.
 
-## Biggest remaining blueprint items (before “polish UI”)
+### Widgets
+- Backend validates controlled widget schema including:
+  - `pull_quote`, `related_card`, `youtube`, `gallery`
+- Frontend renders:
+  - `pull_quote`, `related_card`, `youtube`, `gallery`
+
+## Biggest remaining blueprint items
 1) Curated homepage modules (Aeon-like)
-   - Requires backend models and endpoints to define a homepage layout and curated slots.
-2) Video widget (embeds + metadata)
-   - Widget schema needs new widget type(s) and validation.
-   - Frontend renderer + editor widgets form need to support it.
-
-## Suggested next step
-Implement curated homepage modules **first** (backend models + endpoints + minimal UI), then video widget in the widget schema.
+2) Expanded widget set (video/gallery polish, richer embeds)

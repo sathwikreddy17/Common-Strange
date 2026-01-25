@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ArticleCard, { type ArticleCardItem } from "@/components/ArticleCard";
 import TaxonomyNav from "@/components/TaxonomyNav";
+import { getRequestOrigin, absoluteUrl } from "@/lib/urls";
+import { extractResults, type PaginatedResponse } from "@/lib/api";
+import { CuratedModules, type CuratedModule } from "@/app/_components/CuratedModules";
 
 type Category = {
   name: string;
@@ -22,14 +25,15 @@ type PublicArticleListItem = {
   authors: Array<{ name: string; slug: string; bio: string }>;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 async function fetchCategory(slug: string): Promise<Category | null> {
   try {
-    const res = await fetch(`${API_BASE}/v1/categories/`, { next: { revalidate: 600 } });
+    const origin = await getRequestOrigin();
+    const res = await fetch(absoluteUrl(origin, "/v1/categories/"), { next: { revalidate: 600 } });
     if (!res.ok) return null;
-    const items = (await res.json()) as Category[];
+    const data = (await res.json()) as Category[] | PaginatedResponse<Category>;
+    const items = extractResults(data);
     return items.find((x) => x.slug === slug) ?? null;
   } catch {
     return null;
@@ -38,11 +42,27 @@ async function fetchCategory(slug: string): Promise<Category | null> {
 
 async function fetchCategoryArticles(slug: string): Promise<PublicArticleListItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/categories/${encodeURIComponent(slug)}/articles/`, {
+    const origin = await getRequestOrigin();
+    const res = await fetch(absoluteUrl(origin, `/v1/categories/${encodeURIComponent(slug)}/articles/`), {
       next: { revalidate: 60 },
     });
     if (!res.ok) return [];
-    return (await res.json()) as PublicArticleListItem[];
+    const data = (await res.json()) as PublicArticleListItem[] | PaginatedResponse<PublicArticleListItem>;
+    return extractResults(data);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchCategoryModules(slug: string): Promise<CuratedModule[]> {
+  try {
+    const origin = await getRequestOrigin();
+    const res = await fetch(absoluteUrl(origin, `/v1/categories/${encodeURIComponent(slug)}/modules/`), {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as unknown;
+    return Array.isArray(data) ? (data as CuratedModule[]) : [];
   } catch {
     return [];
   }
@@ -73,7 +93,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   const category = await fetchCategory(slug);
   if (!category) notFound();
 
-  const articles = await fetchCategoryArticles(slug);
+  const [modules, articles] = await Promise.all([fetchCategoryModules(slug), fetchCategoryArticles(slug)]);
 
   const canonicalUrl = `${SITE_URL}/categories/${encodeURIComponent(category.slug)}`;
   const breadcrumbJsonLd = {
@@ -106,6 +126,8 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
           <TaxonomyNav />
         </div>
       </header>
+
+      <CuratedModules modules={modules} />
 
       {articles.length === 0 ? (
         <p className="text-zinc-600">No articles in this category yet.</p>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fetchList } from "@/lib/api";
 
 type Category = {
   name: string;
@@ -6,18 +7,8 @@ type Category = {
   description: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
-
 async function fetchCategories(): Promise<Category[]> {
-  try {
-    const res = await fetch(`${API_BASE}/v1/categories/`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return [];
-    return (await res.json()) as Category[];
-  } catch {
-    return [];
-  }
+  return fetchList<Category>("/v1/categories/", { next: { revalidate: 3600 } });
 }
 
 export default async function CategoriesIndexPage() {

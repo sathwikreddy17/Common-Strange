@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ArticleCard, { type ArticleCardItem } from "@/components/ArticleCard";
 import TaxonomyNav from "@/components/TaxonomyNav";
+import { getRequestOrigin, absoluteUrl } from "@/lib/urls";
+import { extractResults, type PaginatedResponse } from "@/lib/api";
+import { CuratedModules, type CuratedModule } from "@/app/_components/CuratedModules";
 
 type Author = {
   name: string;
@@ -22,17 +25,18 @@ type PublicArticleListItem = {
   authors: Array<Author>;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 async function fetchAuthor(slug: string): Promise<Author | null> {
   try {
-    const res = await fetch(`${API_BASE}/v1/authors/?_=${encodeURIComponent(slug)}`, {
+    const origin = await getRequestOrigin();
+    const res = await fetch(absoluteUrl(origin, `/v1/authors/?_=${encodeURIComponent(slug)}`), {
       next: { revalidate: 600 },
     });
 
     if (!res.ok) return null;
-    const items = (await res.json()) as Author[];
+    const data = (await res.json()) as Author[] | PaginatedResponse<Author>;
+    const items = extractResults(data);
     return items.find((x) => x.slug === slug) ?? null;
   } catch {
     return null;
@@ -41,12 +45,28 @@ async function fetchAuthor(slug: string): Promise<Author | null> {
 
 async function fetchAuthorArticles(slug: string): Promise<PublicArticleListItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/authors/${encodeURIComponent(slug)}/articles/`, {
+    const origin = await getRequestOrigin();
+    const res = await fetch(absoluteUrl(origin, `/v1/authors/${encodeURIComponent(slug)}/articles/`), {
       next: { revalidate: 60 },
     });
 
     if (!res.ok) return [];
-    return (await res.json()) as PublicArticleListItem[];
+    const data = (await res.json()) as PublicArticleListItem[] | PaginatedResponse<PublicArticleListItem>;
+    return extractResults(data);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchAuthorModules(slug: string): Promise<CuratedModule[]> {
+  try {
+    const origin = await getRequestOrigin();
+    const res = await fetch(absoluteUrl(origin, `/v1/authors/${encodeURIComponent(slug)}/modules/`), {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as unknown;
+    return Array.isArray(data) ? (data as CuratedModule[]) : [];
   } catch {
     return [];
   }
@@ -75,7 +95,7 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
   const author = await fetchAuthor(slug);
   if (!author) notFound();
 
-  const articles = await fetchAuthorArticles(author.slug);
+  const [modules, articles] = await Promise.all([fetchAuthorModules(author.slug), fetchAuthorArticles(author.slug)]);
 
   const canonicalUrl = `${SITE_URL}/authors/${encodeURIComponent(author.slug)}`;
   const breadcrumbJsonLd = {
@@ -108,6 +128,8 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
           <TaxonomyNav />
         </div>
       </header>
+
+      <CuratedModules modules={modules} />
 
       {articles.length === 0 ? (
         <p className="text-zinc-600">No published articles by this author yet.</p>

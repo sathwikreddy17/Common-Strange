@@ -32,6 +32,17 @@ export default function EditorHomePage() {
         </div>
 
         <div>
+          <h2 className="text-lg font-medium">Curation</h2>
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">
+            <li>
+              <Link className="text-zinc-700 hover:underline" href="/editor/modules">
+                Homepage modules (Publisher)
+              </Link>
+            </li>
+          </ul>
+        </div>
+
+        <div>
           <h2 className="text-lg font-medium">Taxonomy</h2>
           <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">
             <li>
@@ -52,6 +63,17 @@ export default function EditorHomePage() {
             <li>
               <Link className="text-zinc-700 hover:underline" href="/editor/tags">
                 Tags
+              </Link>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="text-lg font-medium">Media</h2>
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm">
+            <li>
+              <Link className="text-zinc-700 hover:underline" href="/editor/media">
+                Upload + library (PoC)
               </Link>
             </li>
           </ul>

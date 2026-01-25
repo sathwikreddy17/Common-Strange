@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fetchList } from "@/lib/api";
 
 type Author = {
   name: string;
@@ -6,18 +7,8 @@ type Author = {
   bio: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
-
 async function fetchAuthors(): Promise<Author[]> {
-  try {
-    const res = await fetch(`${API_BASE}/v1/authors/`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return [];
-    return (await res.json()) as Author[];
-  } catch {
-    return [];
-  }
+  return fetchList<Author>("/v1/authors/", { next: { revalidate: 3600 } });
 }
 
 export default async function AuthorsIndexPage() {

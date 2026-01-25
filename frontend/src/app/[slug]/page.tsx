@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import ArticleEvents from "@/app/[slug]/ArticleEvents";
-import ShareActions from "@/app/[slug]/ShareActions";
+import ShareActions from "./ShareActions";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -16,7 +16,37 @@ type RelatedCardWidget = {
   articleId: number;
 };
 
-type Widget = PullQuoteWidget | RelatedCardWidget;
+type YouTubeWidget = {
+  type: "youtube";
+  videoId: string;
+  title?: string | null;
+  caption?: string | null;
+};
+
+type GalleryWidget = {
+  type: "gallery";
+  mediaIds: number[];
+  title?: string | null;
+  caption?: string | null;
+};
+
+type ImageWidget = {
+  type: "image";
+  mediaId: number;
+  altText?: string | null;
+  caption?: string | null;
+};
+
+type Widget =
+  | { type: "pull_quote"; text: string; attribution?: string | null }
+  | { type: "related_card"; articleId: number }
+  | { type: "youtube"; videoId: string; title?: string | null; caption?: string | null }
+  | { type: "gallery"; mediaIds: number[]; title?: string | null; caption?: string | null }
+  | { type: "image"; mediaId: number; altText?: string | null; caption?: string | null }
+  | { type: "embed"; provider: string; url: string; title?: string | null; caption?: string | null }
+  | { type: "callout"; variant: "note" | "tip" | "warning"; title?: string | null; text: string }
+  | { type: "heading"; level: 2 | 3 | 4; text: string }
+  | { type: "divider" };
 
 type Tag = {
   name: string;
@@ -50,6 +80,24 @@ type PublicArticleDetail = {
   authors: Array<{ name: string; slug: string; bio: string }>;
   tags?: Tag[];
   og_image_key: string;
+};
+
+type MediaAsset = {
+  id: number;
+  thumb_key: string;
+  medium_key: string;
+  large_key: string;
+  original_key: string;
+  thumb_url?: string;
+  medium_url?: string;
+  large_url?: string;
+  original_url?: string;
+  width?: number | null;
+  height?: number | null;
+  caption: string;
+  credit: string;
+  alt_text: string;
+  mime_type: string;
 };
 
 async function getOriginForServerFetch(): Promise<string> {
@@ -87,18 +135,53 @@ async function fetchRelatedArticlesByIds(ids: number[]): Promise<Map<number, Pub
   const out = new Map<number, PublicArticleListItem>();
   if (!unique.length) return out;
 
-  // Current API only exposes list; keep this efficient-ish by doing a single fetch and mapping IDs.
-  // If/when backend adds /v1/articles/by-ids?ids=..., switch here.
   const origin = await getOriginForServerFetch();
-  const res = await fetch(apiUrl(`/v1/articles/`, origin), { next: { revalidate: 60 } });
+  const qs = new URLSearchParams({ ids: unique.join(",") });
+  const res = await fetch(apiUrl(`/v1/articles/by-ids/?${qs.toString()}`, origin), { next: { revalidate: 60 } });
   if (!res.ok) return out;
-  const items = (await res.json()) as PublicArticleListItem[];
-
-  const wanted = new Set(unique);
-  for (const it of items) {
-    if (wanted.has(it.id)) out.set(it.id, it);
+  const data = (await res.json()) as unknown;
+  // Handle paginated response
+  let items: PublicArticleListItem[];
+  if (data && typeof data === 'object' && 'results' in data) {
+    items = (data as { results: PublicArticleListItem[] }).results;
+  } else {
+    items = Array.isArray(data) ? (data as PublicArticleListItem[]) : [];
   }
+
+  for (const it of items) out.set(it.id, it);
   return out;
+}
+
+async function fetchMediaAsset(id: number): Promise<MediaAsset | null> {
+  const origin = await getOriginForServerFetch();
+  const res = await fetch(apiUrl(`/v1/media-assets/${encodeURIComponent(String(id))}/`, origin), {
+    next: { revalidate: 3600 },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  const data = (await res.json()) as { media?: MediaAsset };
+  return data?.media ?? null;
+}
+
+async function fetchMediaAssetsByIds(ids: number[]): Promise<Map<number, MediaAsset>> {
+  const unique = Array.from(new Set(ids)).filter((x) => Number.isFinite(x));
+  const out = new Map<number, MediaAsset>();
+  await Promise.all(
+    unique.map(async (id) => {
+      const m = await fetchMediaAsset(id);
+      if (m) out.set(id, m);
+    }),
+  );
+  return out;
+}
+
+function pickBestMediaUrl(origin: string, m: MediaAsset | undefined): string | null {
+  if (!m) return null;
+  const url = m.medium_url || m.large_url || m.thumb_url || m.original_url;
+  if (!url) return null;
+  // Backend may return relative URLs; normalize to absolute for SSR safety.
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${origin}${url.startsWith("/") ? url : `/${url}`}`;
 }
 
 function PullQuote({ widget }: { widget: PullQuoteWidget }) {
@@ -121,6 +204,132 @@ function RelatedCard({ related }: { related: PublicArticleListItem }) {
         {related.dek ? <div className="mt-1 text-sm text-zinc-600">{related.dek}</div> : null}
       </Link>
     </aside>
+  );
+}
+
+function YouTubeEmbed({ widget }: { widget: YouTubeWidget }) {
+  const src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(widget.videoId)}`;
+  return (
+    <figure className="my-10">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-black">
+        <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+          <iframe
+            className="absolute inset-0 h-full w-full"
+            src={src}
+            title={widget.title ?? "YouTube video"}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      </div>
+      {widget.caption ? (
+        <figcaption className="mt-3 text-sm text-zinc-600">{widget.caption}</figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
+function Gallery({ widget, origin, mediaById }: { widget: GalleryWidget; origin: string; mediaById: Map<number, MediaAsset> }) {
+  const ids = Array.isArray(widget.mediaIds) ? widget.mediaIds : [];
+
+  return (
+    <section className="my-10 rounded-2xl border border-zinc-200 bg-white p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Gallery</div>
+          {widget.title ? <h3 className="mt-1 text-base font-semibold text-zinc-900">{widget.title}</h3> : null}
+        </div>
+        <div className="text-xs text-zinc-500">{ids.length} items</div>
+      </div>
+
+      {widget.caption ? <div className="mt-3 text-sm text-zinc-600">{widget.caption}</div> : null}
+
+      {ids.length ? (
+        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {ids.map((id) => {
+            const m = mediaById.get(id);
+            const src = pickBestMediaUrl(origin, m);
+
+            return (
+              <li key={id} className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
+                {src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={src}
+                    alt={m?.alt_text || m?.caption || `Media ${id}`}
+                    className="h-40 w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-40 items-center justify-center text-sm text-zinc-500">Missing media #{id}</div>
+                )}
+                {m?.caption || m?.credit ? (
+                  <div className="space-y-1 p-3">
+                    {m.caption ? <div className="text-sm text-zinc-700">{m.caption}</div> : null}
+                    {m.credit ? <div className="text-xs text-zinc-500">{m.credit}</div> : null}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <div className="mt-4 text-sm text-zinc-600">(Empty gallery)</div>
+      )}
+    </section>
+  );
+}
+
+function ImageEmbed({ widget, origin, mediaById }: { widget: ImageWidget; origin: string; mediaById: Map<number, MediaAsset> }) {
+  const m = mediaById.get(widget.mediaId);
+  const src = pickBestMediaUrl(origin, m);
+  const alt = widget.altText || m?.alt_text || m?.caption || `Media ${widget.mediaId}`;
+
+  return (
+    <figure className="my-10">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50">
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={alt} className="h-auto w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="flex h-56 items-center justify-center text-sm text-zinc-500">Missing media #{widget.mediaId}</div>
+        )}
+      </div>
+
+      {widget.caption || m?.credit ? (
+        <figcaption className="mt-3 space-y-1 text-sm text-zinc-600">
+          {widget.caption ? <div>{widget.caption}</div> : null}
+          {m?.credit ? <div className="text-xs text-zinc-500">{m.credit}</div> : null}
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
+function EmbedWidgetView({ w }: { w: Extract<Widget, { type: "embed" }> }) {
+  const provider = (w.provider || "").trim().toLowerCase();
+  const url = (w.url || "").trim();
+
+  const allowed = new Set(["youtube", "vimeo", "spotify", "soundcloud", "substack", "instagram", "tiktok", "x", "twitter"]);
+  if (!allowed.has(provider)) return null;
+  if (!(url.startsWith("https://") || url.startsWith("http://"))) return null;
+
+  return (
+    <figure className="my-8 rounded-2xl border border-zinc-200 bg-white p-4">
+      {w.title ? <div className="mb-3 text-sm font-semibold text-zinc-900">{w.title}</div> : null}
+
+      <div className="aspect-video w-full overflow-hidden rounded-xl bg-zinc-50">
+        <iframe
+          className="h-full w-full"
+          src={url}
+          title={w.title || `${provider} embed`}
+          allow={provider === "youtube" || provider === "vimeo" ? "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" : undefined}
+          allowFullScreen={provider === "youtube" || provider === "vimeo"}
+        />
+      </div>
+
+      {w.caption ? <figcaption className="mt-3 text-sm text-zinc-600">{w.caption}</figcaption> : null}
+    </figure>
   );
 }
 
@@ -266,6 +475,16 @@ export default async function ArticlePage({
   const widgets = article.widgets_json?.widgets ?? [];
   const relatedCardWidgets = widgets.filter((w) => w.type === "related_card") as RelatedCardWidget[];
 
+  const galleryWidgets = widgets.filter((w) => w.type === "gallery") as GalleryWidget[];
+  const galleryMediaIds = galleryWidgets.flatMap((g) => (Array.isArray(g.mediaIds) ? g.mediaIds : []));
+
+  const imageWidgets = widgets.filter((w) => w.type === "image") as ImageWidget[];
+  const imageMediaIds = imageWidgets
+    .map((w) => w.mediaId)
+    .filter((id) => Number.isFinite(id) && id > 0);
+
+  const mediaById = await fetchMediaAssetsByIds([...galleryMediaIds, ...imageMediaIds]);
+
   const relatedById = await fetchRelatedArticlesByIds(relatedCardWidgets.map((w) => w.articleId));
 
   const relatedCards = relatedCardWidgets
@@ -365,6 +584,23 @@ export default async function ArticlePage({
                 if (w.type === "pull_quote") {
                   return <PullQuote key={idx} widget={w} />;
                 }
+                if (w.type === "heading") {
+                  return <Heading key={idx} w={w} />;
+                }
+                if (w.type === "divider") {
+                  return <Divider key={idx} />;
+                }
+                if (w.type === "youtube") {
+                  return <YouTubeEmbed key={idx} widget={w} />;
+                }
+                if (w.type === "gallery") {
+                  return <Gallery key={idx} widget={w} origin={origin} mediaById={mediaById} />;
+                }
+                if (w.type === "image") {
+                  return <ImageEmbed key={idx} widget={w} origin={origin} mediaById={mediaById} />;
+                }
+                if (w.type === "embed") return <EmbedWidgetView key={idx} w={w} />;
+                if (w.type === "callout") return <Callout key={idx} w={w} />;
                 // related cards are rendered in the sidebar; keep unknown widgets visible for debugging.
                 if (w.type === "related_card") return null;
 
@@ -415,4 +651,33 @@ export default async function ArticlePage({
       {modifiedTime ? <div className="mt-10 text-xs text-zinc-500">Updated {formatDateShort(modifiedTime)}</div> : null}
     </main>
   );
+}
+
+function Callout({ w }: { w: Extract<Widget, { type: "callout" }> }) {
+  const v = (w.variant || "note").toLowerCase();
+  const tone =
+    v === "warning"
+      ? "border-amber-200 bg-amber-50 text-amber-950"
+      : v === "tip"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+        : "border-blue-200 bg-blue-50 text-blue-950";
+
+  return (
+    <aside className={`my-8 rounded-2xl border p-4 ${tone}`}>
+      {w.title ? <div className="text-sm font-semibold">{w.title}</div> : null}
+      <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{w.text}</div>
+    </aside>
+  );
+}
+
+function Heading({ w }: { w: Extract<Widget, { type: "heading" }> }) {
+  const level = w.level;
+  const text = w.text;
+  if (level === 2) return <h2 className="mt-10 text-2xl font-semibold tracking-tight text-zinc-900">{text}</h2>;
+  if (level === 3) return <h3 className="mt-8 text-xl font-semibold tracking-tight text-zinc-900">{text}</h3>;
+  return <h4 className="mt-6 text-lg font-semibold tracking-tight text-zinc-900">{text}</h4>;
+}
+
+function Divider() {
+  return <hr className="my-10 border-zinc-200" />;
 }

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ArticleCard, { type ArticleCardItem } from "@/components/ArticleCard";
 import TaxonomyNav from "@/components/TaxonomyNav";
+import { getRequestOrigin, absoluteUrl } from "@/lib/urls";
+import { extractResults, type PaginatedResponse } from "@/lib/api";
 
 type Tag = {
   name: string;
@@ -22,14 +24,15 @@ type PublicArticleListItem = {
   tags: Tag[];
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 async function fetchTag(slug: string): Promise<Tag | null> {
   try {
-    const res = await fetch(`${API_BASE}/v1/tags/`, { next: { revalidate: 600 } });
+    const origin = await getRequestOrigin();
+    const res = await fetch(absoluteUrl(origin, "/v1/tags/"), { next: { revalidate: 600 } });
     if (!res.ok) return null;
-    const items = (await res.json()) as Tag[];
+    const data = (await res.json()) as Tag[] | PaginatedResponse<Tag>;
+    const items = extractResults(data);
     return items.find((x) => x.slug === slug) ?? null;
   } catch {
     return null;
@@ -38,11 +41,13 @@ async function fetchTag(slug: string): Promise<Tag | null> {
 
 async function fetchTagArticles(slug: string): Promise<PublicArticleListItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/v1/tags/${encodeURIComponent(slug)}/articles/`, {
+    const origin = await getRequestOrigin();
+    const res = await fetch(absoluteUrl(origin, `/v1/tags/${encodeURIComponent(slug)}/articles/`), {
       next: { revalidate: 60 },
     });
     if (!res.ok) return [];
-    return (await res.json()) as PublicArticleListItem[];
+    const data = (await res.json()) as PublicArticleListItem[] | PaginatedResponse<PublicArticleListItem>;
+    return extractResults(data);
   } catch {
     return [];
   }

@@ -28,8 +28,16 @@ load_dotenv(BASE_DIR / ".env.local")
 # SECURITY WARNING: don't run with debug turned on in production!
 import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-change-me")
 DEBUG = os.getenv("DEBUG", "0") == "1"
+
+# Security fix: Ensure SECRET_KEY is set in production
+_secret_key = os.getenv("SECRET_KEY")
+if not _secret_key and not DEBUG:
+    raise RuntimeError(
+        "SECRET_KEY environment variable must be set in production. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+    )
+SECRET_KEY = _secret_key or "dev-insecure-change-me"
 
 # Hosts / proxy
 # When ALLOWED_HOSTS is unset in dev/CI, allow localhost-ish hosts and Django's
@@ -100,16 +108,32 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB", "commonstrange"),
-        "USER": os.getenv("POSTGRES_USER", "commonstrange"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "commonstrange"),
-        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
-        "PORT": int(os.getenv("POSTGRES_PORT", "5432")),
+# Support Render's DATABASE_URL or individual POSTGRES_* vars
+_database_url = os.getenv("DATABASE_URL", "")
+
+if _database_url:
+    # Parse DATABASE_URL (Render provides this)
+    import dj_database_url
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=_database_url,
+            conn_max_age=60,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB", "commonstrange"),
+            "USER": os.getenv("POSTGRES_USER", "commonstrange"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD", "commonstrange"),
+            "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+            "PORT": int(os.getenv("POSTGRES_PORT", "5432")),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+        }
+    }
 
 
 # Password validation
@@ -212,7 +236,12 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         # Public events ingestion endpoints (pageview/read)
         "events": os.environ.get("EVENTS_THROTTLE_RATE", "60/min"),
+        # General API rate limit
+        "api": os.environ.get("API_THROTTLE_RATE", "100/min"),
     },
+    # Pagination for list endpoints
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 20,
 }
 
 # Django trailing slash behavior comes from APPEND_SLASH (default True)
@@ -221,13 +250,17 @@ REST_FRAMEWORK = {
 _csrf_trusted = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(",") if o.strip()]
 
-# CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-# Optional: if you want to allow all for dev (not recommended for prod)
-# CORS_ALLOW_ALL_ORIGINS = True
+# Cross-site cookie settings for Vercel → Render setup
+CSRF_COOKIE_SAMESITE = "None" if not DEBUG else "Lax"
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = "None" if not DEBUG else "Lax"
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+
+# CORS - Environment-configurable for production
+_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(",") if o.strip()]
+CORS_ALLOW_CREDENTIALS = True
 
 # ---
 # Cache (Redis-backed when available)
@@ -242,7 +275,14 @@ if REDIS_URL:
             "LOCATION": REDIS_URL,
             "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
             "TIMEOUT": 60,
-        }
+        },
+        "search": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+            "TIMEOUT": 300,  # 5 min for search results
+            "KEY_PREFIX": "search",
+        },
     }
 else:
     CACHES = {
@@ -252,3 +292,80 @@ else:
             "TIMEOUT": 60,
         }
     }
+
+# ---
+# Logging (Structured JSON in production)
+# ---
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+        "json": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        } if not DEBUG else {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json" if not DEBUG else "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "content": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+# ---
+# Sentry Error Tracking (Optional)
+# ---
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+            RedisIntegration(),
+        ],
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        send_default_pii=False,
+        environment=os.getenv("SENTRY_ENVIRONMENT", "production" if not DEBUG else "development"),
+    )
+
+# ---
+# Security Headers (Production)
+# ---
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

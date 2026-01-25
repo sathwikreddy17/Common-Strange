@@ -23,12 +23,23 @@ def _bucket_prefix() -> str:
     return prefix + "/"
 
 
-def _public_url_for_key(key: str) -> str:
+def public_url_for_key(key: str) -> str:
+    """Return a public URL for a stored object key.
+
+    If MEDIA_PUBLIC_BASE_URL is configured (e.g. cdn domain), use it.
+    Otherwise, fall back to the backend proxy endpoint (/v1/media/<key>).
+    """
+
     base = str(getattr(settings, "MEDIA_PUBLIC_BASE_URL", "") or "").rstrip("/")
     if base:
         return f"{base}/{key.lstrip('/')}"
     # Fallback: expose through backend public endpoint.
     return f"/v1/media/{key}"
+
+
+def _public_url_for_key(key: str) -> str:
+    # Back-compat for internal callers.
+    return public_url_for_key(key)
 
 
 def _s3_client():
@@ -63,7 +74,7 @@ def put_bytes(*, key: str, data: bytes, content_type: str) -> StoredObject:
         )
         return StoredObject(
             key=key,
-            public_url=_public_url_for_key(key),
+            public_url=public_url_for_key(key),
             content_type=content_type,
             size_bytes=len(data),
         )
@@ -75,7 +86,7 @@ def put_bytes(*, key: str, data: bytes, content_type: str) -> StoredObject:
 
     return StoredObject(
         key=key,
-        public_url=_public_url_for_key(key),
+        public_url=public_url_for_key(key),
         content_type=content_type,
         size_bytes=len(data),
     )

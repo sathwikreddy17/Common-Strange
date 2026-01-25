@@ -78,3 +78,30 @@ class EditorMediaUploadView(APIView):
         asset.save()
 
         return Response({"media": MediaAssetSerializer(asset).data}, status=201)
+
+
+class PublicMediaAssetDetailView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk: int):
+        try:
+            asset = MediaAsset.objects.get(pk=pk)
+        except MediaAsset.DoesNotExist:
+            return Response({"detail": "Not found"}, status=404)
+
+        return Response({"media": MediaAssetSerializer(asset).data})
+
+
+class EditorMediaRecentView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsEditor]
+
+    def get(self, request):
+        limit_raw = request.query_params.get("limit", "24")
+        try:
+            limit = int(limit_raw)
+        except Exception:
+            limit = 24
+        limit = max(1, min(limit, 100))
+
+        qs = MediaAsset.objects.order_by("-created_at")[:limit]
+        return Response({"items": MediaAssetSerializer(qs, many=True).data})
