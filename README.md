@@ -117,6 +117,22 @@ Blueprint-aligned role hierarchy with session-based auth.
 - **Reader Features**: Save articles, follow topics, reading history
 - **Admin Features**: Publishers can create/manage staff accounts
 
+#### Role Hierarchy & Permissions
+Roles are hierarchical - higher roles inherit all permissions from lower roles:
+
+| Permission | Writer | Editor | Publisher |
+|------------|:------:|:------:|:---------:|
+| Create article drafts | ✅ | ✅ | ✅ |
+| Edit own articles | ✅ | ✅ | ✅ |
+| Upload media | ✅ | ✅ | ✅ |
+| View all articles | ✅ | ✅ | ✅ |
+| Review articles | ❌ | ✅ | ✅ |
+| Approve/reject submissions | ❌ | ✅ | ✅ |
+| Schedule articles | ❌ | ✅ | ✅ |
+| Publish articles | ❌ | ❌ | ✅ |
+| Manage users | ❌ | ❌ | ✅ |
+| Full admin access | ❌ | ❌ | ✅ |
+
 ### Search (Phase 1: Postgres FTS + trigram)
 Blueprint-aligned (Blueprint §5).
 - Real Postgres `tsvector` stored on `Article.search_tsv` with GIN index
@@ -288,6 +304,8 @@ Seed demo content:
 ## Test Credentials (Development)
 | Username | Password | Role | Capabilities |
 |----------|----------|------|--------------|
-| admin | *(set via createsuperuser)* | Publisher | Full access |
-| writer1 | demo1234 | Writer | Create article drafts |
-| editor1 | demo1234 | Editor | Review and approve articles |
+| admin | *(set via createsuperuser)* | Publisher | Full access - publish, manage users, all editor features |
+| editor1 | demo1234 | Editor | Review, approve, schedule articles + all writer features |
+| writer1 | demo1234 | Writer | Create drafts, edit own articles, upload media |
+
+**Note**: Roles are hierarchical - Editors have all Writer permissions, Publishers have all Editor permissions.
