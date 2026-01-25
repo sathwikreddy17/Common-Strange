@@ -629,10 +629,11 @@ export default function Home() {
     };
   }, []);
 
-  // Split articles: first for hero, rest for grid
-  const heroArticle = articles[0];
-  const featuredArticles = articles.slice(1, 4);
-  const latestArticles = articles.slice(4, 10);
+  // Split articles: prefer an article with a hero image for the main hero section
+  const heroArticle = articles.find(a => a.hero_image) || articles[0];
+  const remainingArticles = articles.filter(a => a.id !== heroArticle?.id);
+  const featuredArticles = remainingArticles.slice(0, 3);
+  const latestArticles = remainingArticles.slice(3, 9);
 
   if (loading) {
     return (

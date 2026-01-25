@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import ArticleEvents from "@/app/[slug]/ArticleEvents";
 import ShareActions from "./ShareActions";
 import SaveArticleButton from "./SaveArticleButton";
+import EditArticleLink from "./EditArticleLink";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -522,6 +523,7 @@ export default async function ArticlePage({
         </Link>
 
         <div className="flex items-center gap-2">
+          <EditArticleLink articleId={article.id} />
           <SaveArticleButton articleId={article.id} articleSlug={article.slug} />
           <ShareActions title={shareTitle} url={shareUrl} />
           <a

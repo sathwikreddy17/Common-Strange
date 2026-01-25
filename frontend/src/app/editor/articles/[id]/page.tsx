@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { apiGet } from "../../_shared";
+import { cookies } from "next/headers";
 import EditFormClient from "./EditFormClient";
 import WorkflowButtons from "./workflow-buttons";
 
@@ -36,14 +36,29 @@ type EditorialArticleDetail = {
 
 async function fetchArticle(id: string): Promise<EditorialArticleDetail | null> {
   try {
-    return await apiGet<EditorialArticleDetail>(`/v1/editor/articles/${id}/`);
+    // Get cookies from the incoming request to forward to the backend
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.getAll()
+      .map(c => `${c.name}=${c.value}`)
+      .join('; ');
+    
+    const res = await fetch(`http://backend:8000/v1/editor/articles/${id}/`, {
+      cache: "no-store",
+      headers: {
+        Cookie: cookieHeader,
+      },
+    });
+    
+    if (!res.ok) return null;
+    return await res.json();
   } catch {
     return null;
   }
 }
 
-export default async function EditorArticleEditPage({ params }: { params: { id: string } }) {
-  const article = await fetchArticle(params.id);
+export default async function EditorArticleEditPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const article = await fetchArticle(id);
   if (!article) notFound();
 
   return (
@@ -55,9 +70,12 @@ export default async function EditorArticleEditPage({ params }: { params: { id: 
             <p className="mt-2 text-zinc-600">ID: {article.id} · Status: {article.status}</p>
           </div>
 
-          <nav className="text-sm">
+          <nav className="flex items-center gap-4 text-sm">
             <Link className="text-zinc-700 hover:underline" href="/editor/articles">
               Back to list
+            </Link>
+            <Link className="text-zinc-700 hover:underline" href="/">
+              Home
             </Link>
           </nav>
         </div>

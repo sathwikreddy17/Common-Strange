@@ -1,4 +1,4 @@
-import { apiGet } from "../_shared";
+import { cookies } from "next/headers";
 
 export type EditorialArticle = {
   id: number;
@@ -12,6 +12,27 @@ export type EditorialArticle = {
 };
 
 export async function fetchEditorialArticles(): Promise<EditorialArticle[]> {
-  // Session-auth, returns all articles visible to the user (Writer/Editor/Publisher)
-  return apiGet<EditorialArticle[]>("/v1/editor/articles/");
+  // Get cookies from the incoming request to forward to the backend
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.getAll()
+    .map(c => `${c.name}=${c.value}`)
+    .join('; ');
+
+  const res = await fetch("http://backend:8000/v1/editor/articles/", {
+    cache: "no-store",
+    headers: {
+      Cookie: cookieHeader,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch articles: ${res.status}`);
+  }
+
+  const data = await res.json();
+  // Handle paginated response
+  if (data && typeof data === "object" && "results" in data) {
+    return data.results;
+  }
+  return Array.isArray(data) ? data : [];
 }

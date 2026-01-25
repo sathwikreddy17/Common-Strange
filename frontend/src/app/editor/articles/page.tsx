@@ -34,6 +34,9 @@ export default async function EditorArticlesPage() {
             <Link className="text-zinc-700 hover:underline" href="/editor">
               Editor
             </Link>
+            <Link className="text-zinc-700 hover:underline" href="/">
+              Home
+            </Link>
           </nav>
         </div>
       </header>

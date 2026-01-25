@@ -38,13 +38,23 @@ export default function TaxonomyForm({ article }: Props) {
   useEffect(() => {
     async function loadTaxonomy() {
       try {
-        const [categories, series, authors, tags] = await Promise.all([
-          apiGet("/v1/editor/categories/") as Promise<Array<{ slug: string; name: string }>>,
-          apiGet("/v1/editor/series/") as Promise<Array<{ slug: string; name: string }>>,
-          apiGet("/v1/editor/authors/") as Promise<Array<{ slug: string; name: string }>>,
-          apiGet("/v1/editor/tags/") as Promise<Array<{ slug: string; name: string }>>,
+        // API returns paginated responses: { count, results: [...] }
+        type PaginatedResponse<T> = { results: T[] } | T[];
+        const unwrap = <T,>(data: PaginatedResponse<T>): T[] => 
+          Array.isArray(data) ? data : data.results;
+        
+        const [categoriesRes, seriesRes, authorsRes, tagsRes] = await Promise.all([
+          apiGet("/v1/editor/categories/"),
+          apiGet("/v1/editor/series/"),
+          apiGet("/v1/editor/authors/"),
+          apiGet("/v1/editor/tags/"),
         ]);
-        setTax({ categories, series, authors, tags });
+        setTax({
+          categories: unwrap(categoriesRes as PaginatedResponse<{ slug: string; name: string }>),
+          series: unwrap(seriesRes as PaginatedResponse<{ slug: string; name: string }>),
+          authors: unwrap(authorsRes as PaginatedResponse<{ slug: string; name: string }>),
+          tags: unwrap(tagsRes as PaginatedResponse<{ slug: string; name: string }>),
+        });
       } catch {
         setTax(null);
       }

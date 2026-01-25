@@ -227,6 +227,13 @@ export default function AccountPage() {
   return (
     <main className="min-h-screen bg-stone-50">
       <div className="mx-auto max-w-4xl px-6 py-12">
+        {/* Navigation */}
+        <div className="mb-6">
+          <Link href="/" className="text-sm text-stone-600 hover:underline">
+            ← Back to Home
+          </Link>
+        </div>
+        
         {/* Header */}
         <header className="mb-8">
           <div className="flex items-start justify-between">

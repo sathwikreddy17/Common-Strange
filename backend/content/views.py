@@ -387,8 +387,10 @@ def _snapshot(article: Article, *, kind: str, user):
     )
 
 
-class EditorArticleCreateView(generics.CreateAPIView):
+class EditorArticleListCreateView(generics.ListCreateAPIView):
+    """List all articles (GET) or create a new article (POST) for writers."""
     permission_classes = [permissions.IsAuthenticated, IsWriter]
+    queryset = Article.objects.select_related("category", "series").prefetch_related("authors", "tags").order_by("-updated_at")
 
     class InputSerializer(ArticleDetailSerializer):
         class Meta(ArticleDetailSerializer.Meta):
@@ -401,9 +403,10 @@ class EditorArticleCreateView(generics.CreateAPIView):
         _snapshot(article, kind=ArticleVersionKind.MANUAL, user=self.request.user)
 
 
-class EditorArticleUpdateView(generics.UpdateAPIView):
+class EditorArticleUpdateView(generics.RetrieveUpdateAPIView):
+    """Allow GET (retrieve) and PUT/PATCH (update) for editor article editing."""
     permission_classes = [permissions.IsAuthenticated, IsWriter]
-    queryset = Article.objects.all()
+    queryset = Article.objects.select_related("category", "series", "hero_media").prefetch_related("authors", "tags")
 
     class InputSerializer(ArticleDetailSerializer):
         class Meta(ArticleDetailSerializer.Meta):

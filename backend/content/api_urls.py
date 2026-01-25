@@ -71,7 +71,7 @@ urlpatterns = [
         include(
             [
                 # Articles
-                path("articles/", views.EditorArticleCreateView.as_view(), name="editor-article-create"),
+                path("articles/", views.EditorArticleListCreateView.as_view(), name="editor-article-list-create"),
                 path("articles/<int:pk>/", views.EditorArticleUpdateView.as_view(), name="editor-article-update"),
                 path("articles/<int:pk>/submit/", views.EditorSubmitView.as_view(), name="editor-article-submit"),
                 path("articles/<int:pk>/approve/", views.EditorApproveView.as_view(), name="editor-article-approve"),

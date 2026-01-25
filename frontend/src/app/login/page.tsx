@@ -44,6 +44,11 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-stone-50 px-4">
       <div className="w-full max-w-md">
+        <div className="mb-2">
+          <Link href="/" className="text-sm text-stone-600 hover:underline">
+            ← Back to Home
+          </Link>
+        </div>
         <div className="mb-8 text-center">
           <Link href="/" className="text-2xl font-serif font-bold tracking-tight text-stone-900">
             Common Strange

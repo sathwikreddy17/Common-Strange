@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from .models import Article, Author, Category, Series, Tag
+from .models import Article, Author, Category, MediaAsset, Series, Tag
 
 # PoC1: render article markdown to HTML on the server.
 import mistune
@@ -126,12 +126,20 @@ class ArticleListSerializer(serializers.ModelSerializer):
 
 
 class ArticleDetailSerializer(serializers.ModelSerializer):
-    authors = AuthorSerializer(many=True)
-    category = CategorySerializer()
-    series = SeriesSerializer()
-    tags = TagSerializer(many=True)
+    authors = AuthorSerializer(many=True, read_only=True)
+    category = CategorySerializer(read_only=True)
+    series = SeriesSerializer(read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
     hero_image = serializers.SerializerMethodField()
     reading_time_minutes = serializers.SerializerMethodField()
+    
+    # Writable field for setting hero_media by ID
+    hero_media = serializers.PrimaryKeyRelatedField(
+        queryset=MediaAsset.objects.all(),
+        required=False,
+        allow_null=True,
+        write_only=True,
+    )
 
     body_html = serializers.SerializerMethodField()
 
@@ -181,5 +189,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             "tags",
             "og_image_key",
             "hero_image",
+            "hero_media",  # writable field for setting hero image
             "reading_time_minutes",
         ]

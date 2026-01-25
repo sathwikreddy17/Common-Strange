@@ -27,10 +27,13 @@ export default function SaveArticleButton({ articleId, articleSlug }: SaveArticl
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    checkStatus();
+    if (articleId) {
+      checkStatus();
+    }
   }, [articleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkStatus() {
+    if (!articleId) return;
     setLoading(true);
     try {
       // Check if user is logged in

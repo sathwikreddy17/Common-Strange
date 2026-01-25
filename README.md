@@ -59,6 +59,7 @@ This is the canonical “PoC progress” view. Status here is measured strictly 
 - **Done**: Editor upload endpoint: `POST /v1/editor/media/upload/`.
 - **Done**: Editor recent uploads: `GET /v1/editor/media/recent/?limit=...`.
 - **Done**: Image variants (thumb/medium/large) produced.
+- **Done**: Hero images for articles (upload via editor, display on home page and article pages).
 - **Missing**: Video metadata model/storage beyond embeds (YouTube widget covers embed only).
 
 ### Widgets (Blueprint examples)
@@ -129,26 +130,38 @@ Blueprint-aligned (Blueprint §6).
 
 ### Frontend
 Public site:
-- Home page lists published articles + search
-- Trending wired to backend editor-trending endpoint (403-safe)
+- Home page with magazine-style layout:
+  - Full-width hero section featuring article with hero image
+  - Featured articles grid with hero image thumbnails
+  - Newsletter CTA section
+  - Latest + Trending sidebar layout
 - Taxonomy browse pages (categories/authors/series/tags)
 - Article page renders markdown/html plus widgets:
+  - Hero image display (if assigned)
+  - Reading time estimate
   - `pull_quote`
   - `related_card` (sidebar)
   - `youtube`
   - `gallery` (renders real media via `media-assets/<id>`)
+- Edit button on articles for staff users (links to editor)
 
-Editor UI (minimal PoC):
-- `/editor` dashboard + links
-- `/editor/articles/...` draft editing + workflow
+Editor UI:
+- `/editor` dashboard with Home link
+- `/editor/articles` article list with all articles
 - `/editor/articles/new` create new articles
+- `/editor/articles/[id]` edit articles:
+  - Title, dek, body markdown
+  - Hero image upload with preview
+  - Taxonomy assignment (category, series, authors, tags)
+  - Workflow buttons (submit/approve/schedule/publish)
 - `/editor/media` upload + lookup + recent uploads picker
 - `/editor/users` user management (Publisher only)
+- Consistent navigation with Home links throughout
 
 Auth pages:
-- `/login` user login
-- `/signup` public registration
-- `/account` user dashboard (profile, saved articles, settings)
+- `/login` user login with Home link
+- `/signup` public registration with Home link
+- `/account` user dashboard (profile, saved articles, settings) with Home link
 - `/logout` sign out
 
 ---
@@ -179,8 +192,13 @@ Base: `/v1/`
 
 ### Editorial API (session auth)
 Base: `/v1/editor/`
-- Articles: create/edit + workflow transitions + preview tokens
-- Taxonomy: categories/authors/series/tags
+- Articles:
+  - `GET /articles/` - List all articles
+  - `POST /articles/` - Create new article
+  - `GET /articles/<id>/` - Get article details
+  - `PUT|PATCH /articles/<id>/` - Update article
+  - Workflow transitions + preview tokens
+- Taxonomy: categories/authors/series/tags (CRUD)
 - Media:
   - `POST /media/upload/`
   - `GET /media/recent/?limit=...`
