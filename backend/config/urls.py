@@ -25,6 +25,7 @@ urlpatterns = [
     path("healthz", HealthView.as_view(), name="healthz"),
     path("admin/", admin.site.urls),
     path("v1/", include("content.api_urls")),
+    path("v1/auth/", include("accounts.urls")),
 ]
 
 # Development-only media serving

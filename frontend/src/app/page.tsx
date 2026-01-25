@@ -85,7 +85,15 @@ async function fetchTrending(): Promise<TrendingItem[]> {
 
 // ----- Components -----
 
-function Header({ onSearchOpen, onMenuOpen }: { onSearchOpen: () => void; onMenuOpen: () => void }) {
+type UserData = {
+  id: number;
+  username: string;
+  display_name: string;
+  role: string;
+  is_staff: boolean;
+};
+
+function Header({ onSearchOpen, onMenuOpen, user }: { onSearchOpen: () => void; onMenuOpen: () => void; user: UserData | null }) {
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -122,6 +130,15 @@ function Header({ onSearchOpen, onMenuOpen }: { onSearchOpen: () => void; onMenu
           <Link href="/categories" className="text-zinc-600 hover:text-zinc-900 transition-colors">Categories</Link>
           <Link href="/series" className="text-zinc-600 hover:text-zinc-900 transition-colors">Series</Link>
           <Link href="/authors" className="text-zinc-600 hover:text-zinc-900 transition-colors">Authors</Link>
+          {user ? (
+            <Link href="/account" className="text-zinc-600 hover:text-zinc-900 transition-colors flex items-center gap-1">
+              <span className="w-6 h-6 rounded-full bg-zinc-200 flex items-center justify-center text-xs font-medium">
+                {user.display_name?.charAt(0).toUpperCase() || user.username.charAt(0).toUpperCase()}
+              </span>
+            </Link>
+          ) : (
+            <Link href="/login" className="text-zinc-600 hover:text-zinc-900 transition-colors">Sign in</Link>
+          )}
         </nav>
       </div>
     </header>
@@ -548,9 +565,21 @@ function Footer() {
 
 // ----- Main Page -----
 
+async function fetchCurrentUser(): Promise<UserData | null> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/auth/me/`, { credentials: "include" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.user || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Home() {
   const [articles, setArticles] = useState<PublicArticleListItem[]>([]);
   const [trending, setTrending] = useState<TrendingItem[]>([]);
+  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -571,14 +600,16 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        const [data, trendingData] = await Promise.all([
+        const [data, trendingData, userData] = await Promise.all([
           fetchArticles(),
           fetchTrending(),
+          fetchCurrentUser(),
         ]);
 
         if (cancelled) return;
         setArticles(Array.isArray(data) ? data : []);
         setTrending(Array.isArray(trendingData) ? trendingData : []);
+        setUser(userData);
       } catch (err) {
         if (cancelled) return;
         console.error("Home fetch error:", err);
@@ -627,7 +658,7 @@ export default function Home() {
   if (!articles.length) {
     return (
       <>
-        <Header onMenuOpen={() => setMenuOpen(true)} onSearchOpen={() => setSearchOpen(true)} />
+        <Header onMenuOpen={() => setMenuOpen(true)} onSearchOpen={() => setSearchOpen(true)} user={user} />
         <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
         <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
         <main className="flex min-h-[50vh] items-center justify-center">
@@ -643,7 +674,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header onMenuOpen={() => setMenuOpen(true)} onSearchOpen={() => setSearchOpen(true)} />
+      <Header onMenuOpen={() => setMenuOpen(true)} onSearchOpen={() => setSearchOpen(true)} user={user} />
       <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
       <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       

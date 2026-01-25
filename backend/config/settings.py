@@ -65,6 +65,7 @@ INSTALLED_APPS = [
 
     # First-party
     "content",
+    "accounts",
 ]
 
 MIDDLEWARE = [

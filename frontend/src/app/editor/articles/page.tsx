@@ -12,7 +12,7 @@ export default async function EditorArticlesPage() {
   try {
     articles = await fetchEditorialArticles();
   } catch {
-    error = "Not authenticated or not authorized. Log in via /admin/login/ and ensure you are in the Writer or Editor group.";
+    error = "Not authenticated or not authorized. Please log in and ensure you have Writer permissions.";
   }
 
   return (
@@ -24,7 +24,13 @@ export default async function EditorArticlesPage() {
             <p className="mt-2 text-zinc-600">Editorial article list (Writer/Editor/Publisher).</p>
           </div>
 
-          <nav className="text-sm">
+          <nav className="flex items-center gap-4 text-sm">
+            <Link
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-white font-medium hover:bg-zinc-800 transition-colors"
+              href="/editor/articles/new"
+            >
+              + New Article
+            </Link>
             <Link className="text-zinc-700 hover:underline" href="/editor">
               Editor
             </Link>
@@ -33,7 +39,14 @@ export default async function EditorArticlesPage() {
       </header>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {error}
+          <div className="mt-3">
+            <Link href="/login" className="font-medium underline">
+              Go to Login
+            </Link>
+          </div>
+        </div>
       ) : null}
 
       <section className="rounded-xl border border-zinc-200 p-5">

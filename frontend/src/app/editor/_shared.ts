@@ -36,6 +36,21 @@ async function readMaybeJson(res: Response): Promise<unknown> {
   }
 }
 
+async function getCSRFToken(): Promise<string> {
+  try {
+    const res = await fetch(apiUrl("/v1/auth/csrf/"), {
+      credentials: "include",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.csrfToken || "";
+    }
+  } catch {
+    // Ignore
+  }
+  return "";
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), {
     cache: "no-store",
@@ -51,9 +66,13 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, data: Json): Promise<T> {
+  const csrfToken = await getCSRFToken();
   const res = await fetch(apiUrl(path), {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { 
+      "content-type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
     body: JSON.stringify(data ?? {}),
     cache: "no-store",
     credentials: "include",
@@ -68,9 +87,13 @@ export async function apiPost<T>(path: string, data: Json): Promise<T> {
 }
 
 export async function apiPatch<T>(path: string, data: Json): Promise<T> {
+  const csrfToken = await getCSRFToken();
   const res = await fetch(apiUrl(path), {
     method: "PATCH",
-    headers: { "content-type": "application/json" },
+    headers: { 
+      "content-type": "application/json",
+      "X-CSRFToken": csrfToken,
+    },
     body: JSON.stringify(data ?? {}),
     cache: "no-store",
     credentials: "include",
@@ -85,8 +108,12 @@ export async function apiPatch<T>(path: string, data: Json): Promise<T> {
 }
 
 export async function apiDelete(path: string): Promise<void> {
+  const csrfToken = await getCSRFToken();
   const res = await fetch(apiUrl(path), {
     method: "DELETE",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
     cache: "no-store",
     credentials: "include",
   });

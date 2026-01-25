@@ -3,6 +3,7 @@
 import ArticleEditForm from "./edit-form";
 import TaxonomyForm from "./taxonomy-form";
 import WidgetsForm from "./widgets-form";
+import HeroImageForm from "./hero-image-form";
 
 type Widget =
   | { type: "pull_quote"; text: string; attribution?: string | null }
@@ -102,6 +103,9 @@ export default function EditFormClient({ article }: Props) {
   return (
     <>
       <ArticleEditForm article={article} />
+      <div className="mt-10 rounded-lg border border-zinc-200 p-5">
+        <HeroImageForm articleId={article.id} />
+      </div>
       <div className="mt-10">
         <TaxonomyForm article={normalized} />
       </div>

@@ -107,6 +107,15 @@ Blueprint-aligned: MinIO locally / R2 in production shape.
 - Editorial endpoint:
   - `GET /v1/editor/trending/` (last-24h pageviews)
 
+### User Management & Authentication
+Blueprint-aligned role hierarchy with session-based auth.
+- **Roles**: Reader → Writer → Editor → Publisher (hierarchical permissions)
+- **Registration**: Public signup creates reader accounts
+- **Authentication**: Session-based with CSRF protection
+- **User Profiles**: Display name, bio, avatar support
+- **Reader Features**: Save articles, follow topics, reading history
+- **Admin Features**: Publishers can create/manage staff accounts
+
 ### Search (Phase 1: Postgres FTS + trigram)
 Blueprint-aligned (Blueprint §5).
 - Real Postgres `tsvector` stored on `Article.search_tsv` with GIN index
@@ -132,7 +141,15 @@ Public site:
 Editor UI (minimal PoC):
 - `/editor` dashboard + links
 - `/editor/articles/...` draft editing + workflow
+- `/editor/articles/new` create new articles
 - `/editor/media` upload + lookup + recent uploads picker
+- `/editor/users` user management (Publisher only)
+
+Auth pages:
+- `/login` user login
+- `/signup` public registration
+- `/account` user dashboard (profile, saved articles, settings)
+- `/logout` sign out
 
 ---
 
@@ -170,6 +187,22 @@ Base: `/v1/editor/`
 - Analytics:
   - `GET /trending/`
 
+### Auth API (session auth)
+Base: `/v1/auth/`
+- `GET /csrf/` - Get CSRF token
+- `POST /register/` - Create account
+- `POST /login/` - Login
+- `POST /logout/` - Logout
+- `GET /me/` - Current user info
+- `GET|PUT /profile/` - User profile
+- `POST /change-password/` - Change password
+- `GET|POST /saved-articles/` - Saved articles
+- `DELETE /saved-articles/<id>/` - Remove saved
+- `GET|POST /followed-topics/` - Followed topics
+- `GET /reading-history/` - Reading history
+- `GET|POST /users/` - Admin user list/create (Publisher only)
+- `GET|PUT|DELETE /users/<id>/` - Admin user detail (Publisher only)
+
 ---
 
 ## Local dev (Docker)
@@ -190,6 +223,30 @@ Migrations:
 Create admin user:
 - `make createsuperuser`
 
+Create demo staff users:
+```bash
+docker compose exec backend python manage.py shell -c "
+from django.contrib.auth.models import User, Group
+
+# Create groups if they don't exist
+writer_group, _ = Group.objects.get_or_create(name='Writer')
+editor_group, _ = Group.objects.get_or_create(name='Editor')
+publisher_group, _ = Group.objects.get_or_create(name='Publisher')
+
+# Create demo users (password: demo1234)
+for username, group in [('writer1', writer_group), ('editor1', editor_group)]:
+    user, created = User.objects.get_or_create(username=username, defaults={
+        'email': f'{username}@example.com',
+        'is_staff': True,
+    })
+    if created:
+        user.set_password('demo1234')
+        user.groups.add(group)
+        user.save()
+        print(f'Created {username}')
+"
+```
+
 Seed demo content:
 - `docker compose run --rm backend python manage.py seed_demo_content`
 
@@ -204,3 +261,15 @@ Seed demo content:
 ## Next steps (planned / backlog)
 - Curated homepage modules (Aeon-like)
 - Richer widget set (video metadata, richer galleries, etc.)
+- Email verification for new accounts
+- Password reset flow
+- OAuth social login (Google, GitHub)
+
+---
+
+## Test Credentials (Development)
+| Username | Password | Role | Capabilities |
+|----------|----------|------|--------------|
+| admin | *(set via createsuperuser)* | Publisher | Full access |
+| writer1 | demo1234 | Writer | Create article drafts |
+| editor1 | demo1234 | Editor | Review and approve articles |

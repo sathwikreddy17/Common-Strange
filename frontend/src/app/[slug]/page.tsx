@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import ArticleEvents from "@/app/[slug]/ArticleEvents";
 import ShareActions from "./ShareActions";
+import SaveArticleButton from "./SaveArticleButton";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -65,6 +66,7 @@ type PublicArticleListItem = {
 };
 
 type PublicArticleDetail = {
+  id: number;
   title: string;
   slug: string;
   dek: string;
@@ -507,6 +509,7 @@ export default async function ArticlePage({
         </Link>
 
         <div className="flex items-center gap-2">
+          <SaveArticleButton articleId={article.id} articleSlug={article.slug} />
           <ShareActions title={shareTitle} url={shareUrl} />
           <a
             className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"

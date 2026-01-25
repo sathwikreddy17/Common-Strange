@@ -9,11 +9,17 @@ const RESERVED_EXACT = new Set([
   "/media",
   "/assets",
   "/dashboard",
-  "/login",
-  "/logout",
   "/robots.txt",
   "/sitemap.xml",
   "/favicon.ico",
+]);
+
+// Public auth routes handled by frontend
+const PUBLIC_AUTH_ROUTES = new Set([
+  "/login",
+  "/signup",
+  "/logout",
+  "/account",
 ]);
 
 function withDiag(res: NextResponse) {
@@ -23,6 +29,11 @@ function withDiag(res: NextResponse) {
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Let frontend handle public auth routes
+  if (PUBLIC_AUTH_ROUTES.has(pathname)) {
+    return NextResponse.next();
+  }
 
   if (pathname === "/admin") {
     return withDiag(NextResponse.redirect(new URL("/admin/", BACKEND_BASE), 307));
@@ -37,10 +48,6 @@ export function middleware(req: NextRequest) {
   }
 
   if (RESERVED_EXACT.has(pathname)) {
-    if (pathname === "/login" || pathname === "/logout") {
-      return withDiag(NextResponse.redirect(new URL("/admin/login/", BACKEND_BASE), 307));
-    }
-
     return withDiag(NextResponse.redirect(new URL("/", BACKEND_BASE), 307));
   }
 
