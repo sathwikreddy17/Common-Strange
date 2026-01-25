@@ -4,6 +4,17 @@ import { apiGet } from "../../_shared";
 import EditFormClient from "./EditFormClient";
 import WorkflowButtons from "./workflow-buttons";
 
+type HeroImage = {
+  id: number;
+  thumb: string | null;
+  medium: string | null;
+  large: string | null;
+  original: string | null;
+  width: number | null;
+  height: number | null;
+  alt: string;
+};
+
 type EditorialArticleDetail = {
   id: number;
   title: string;
@@ -20,6 +31,7 @@ type EditorialArticleDetail = {
   authors: unknown[];
   tags?: unknown[];
   og_image_key: string;
+  hero_image?: HeroImage | null;
 };
 
 async function fetchArticle(id: string): Promise<EditorialArticleDetail | null> {

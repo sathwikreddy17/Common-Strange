@@ -2,9 +2,20 @@
 
 import { useState, useRef } from "react";
 
+type HeroImage = {
+  id: number;
+  thumb: string | null;
+  medium: string | null;
+  large: string | null;
+  original: string | null;
+  width: number | null;
+  height: number | null;
+  alt: string;
+};
+
 type HeroImageFormProps = {
   articleId: number;
-  currentHeroMediaId?: number | null;
+  currentHeroImage?: HeroImage | null;
   onUpdate?: () => void;
 };
 
@@ -28,12 +39,17 @@ type MediaAsset = {
   large_url?: string;
 };
 
-export default function HeroImageForm({ articleId, currentHeroMediaId, onUpdate }: HeroImageFormProps) {
+export default function HeroImageForm({ articleId, currentHeroImage, onUpdate }: HeroImageFormProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [uploadedMedia, setUploadedMedia] = useState<MediaAsset | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Show current hero image URL
+  const currentImageUrl = currentHeroImage 
+    ? (currentHeroImage.large || currentHeroImage.medium || currentHeroImage.original)
+    : null;
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -97,8 +113,16 @@ export default function HeroImageForm({ articleId, currentHeroMediaId, onUpdate 
     <div className="space-y-4">
       <h3 className="font-medium text-zinc-900">Hero Image</h3>
       
-      {currentHeroMediaId && !uploadedMedia && (
-        <p className="text-sm text-zinc-600">Current hero media ID: {currentHeroMediaId}</p>
+      {/* Show current hero image */}
+      {currentImageUrl && !uploadedMedia && (
+        <div className="rounded-lg border border-zinc-200 p-3">
+          <p className="text-sm text-zinc-600 mb-2">Current hero image:</p>
+          <img
+            src={currentImageUrl}
+            alt={currentHeroImage?.alt || "Hero image"}
+            className="w-full max-w-md rounded-lg"
+          />
+        </div>
       )}
 
       {uploadedMedia && (

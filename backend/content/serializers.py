@@ -130,8 +130,33 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     series = SeriesSerializer()
     tags = TagSerializer(many=True)
+    hero_image = serializers.SerializerMethodField()
+    reading_time_minutes = serializers.SerializerMethodField()
 
     body_html = serializers.SerializerMethodField()
+
+    def get_hero_image(self, obj: Article) -> dict | None:
+        """Return hero image URLs if available."""
+        if not obj.hero_media:
+            return None
+        media = obj.hero_media
+        from django.conf import settings
+        base_url = getattr(settings, 'MEDIA_PUBLIC_BASE_URL', '')
+        return {
+            "id": media.id,
+            "thumb": f"{base_url}/{media.thumb_key}" if media.thumb_key else None,
+            "medium": f"{base_url}/{media.medium_key}" if media.medium_key else None,
+            "large": f"{base_url}/{media.large_key}" if media.large_key else None,
+            "original": f"{base_url}/{media.original_key}" if media.original_key else None,
+            "width": media.width,
+            "height": media.height,
+            "alt": obj.title,  # Use article title as alt text
+        }
+
+    def get_reading_time_minutes(self, obj: Article) -> int:
+        """Estimate reading time based on word count (~200 words/min)."""
+        word_count = len((obj.body_md or "").split())
+        return max(1, round(word_count / 200))
 
     def get_body_html(self, obj: Article) -> str:
         return _render_md(getattr(obj, "body_md", ""))
@@ -155,4 +180,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             "authors",
             "tags",
             "og_image_key",
+            "hero_image",
+            "reading_time_minutes",
         ]

@@ -54,6 +54,17 @@ type Tag = {
   slug: string;
 };
 
+type HeroImage = {
+  id: number;
+  thumb: string | null;
+  medium: string | null;
+  large: string | null;
+  original: string | null;
+  width: number | null;
+  height: number | null;
+  alt: string;
+};
+
 type PublicArticleListItem = {
   id: number;
   title: string;
@@ -82,6 +93,8 @@ type PublicArticleDetail = {
   authors: Array<{ name: string; slug: string; bio: string }>;
   tags?: Tag[];
   og_image_key: string;
+  hero_image?: HeroImage | null;
+  reading_time_minutes?: number;
 };
 
 type MediaAsset = {
@@ -564,8 +577,27 @@ export default async function ArticlePage({
                   <time dateTime={publishedTime}>Published {formatDateShort(publishedTime)}</time>
                 </>
               ) : null}
+              {article.reading_time_minutes ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{article.reading_time_minutes} min read</span>
+                </>
+              ) : null}
             </div>
           </header>
+
+          {/* Hero Image */}
+          {article.hero_image && (article.hero_image.large || article.hero_image.medium || article.hero_image.original) ? (
+            <figure className="mb-10 overflow-hidden rounded-2xl">
+              <img
+                src={article.hero_image.large || article.hero_image.medium || article.hero_image.original || ""}
+                alt={article.hero_image.alt || article.title}
+                width={article.hero_image.width || undefined}
+                height={article.hero_image.height || undefined}
+                className="w-full object-cover"
+              />
+            </figure>
+          ) : null}
 
           {article.body_html ? (
             <section

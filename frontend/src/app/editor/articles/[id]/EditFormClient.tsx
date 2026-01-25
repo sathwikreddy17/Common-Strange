@@ -63,6 +63,17 @@ function isWidget(x: unknown): x is Widget {
   return false;
 }
 
+type HeroImage = {
+  id: number;
+  thumb: string | null;
+  medium: string | null;
+  large: string | null;
+  original: string | null;
+  width: number | null;
+  height: number | null;
+  alt: string;
+};
+
 type EditorialArticleDetail = {
   id: number;
   title: string;
@@ -79,6 +90,7 @@ type EditorialArticleDetail = {
   authors: unknown[];
   tags?: unknown[];
   og_image_key: string;
+  hero_image?: HeroImage | null;
 };
 
 type Props = {
@@ -104,7 +116,10 @@ export default function EditFormClient({ article }: Props) {
     <>
       <ArticleEditForm article={article} />
       <div className="mt-10 rounded-lg border border-zinc-200 p-5">
-        <HeroImageForm articleId={article.id} />
+        <HeroImageForm 
+          articleId={article.id} 
+          currentHeroImage={article.hero_image}
+        />
       </div>
       <div className="mt-10">
         <TaxonomyForm article={normalized} />
