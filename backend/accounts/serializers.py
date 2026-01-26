@@ -188,3 +188,48 @@ class AdminUserUpdateSerializer(serializers.Serializer):
     
     role = serializers.ChoiceField(choices=["reader", "writer", "editor", "publisher"], required=False)
     is_active = serializers.BooleanField(required=False)
+
+
+# ============================================
+# Password Reset Serializers
+# ============================================
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Serializer for requesting a password reset."""
+    
+    email = serializers.EmailField()
+    
+    def validate_email(self, value):
+        # Always return success even if email doesn't exist (security)
+        return value.lower()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer for confirming a password reset."""
+    
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True, min_length=8)
+    password_confirm = serializers.CharField(write_only=True)
+    
+    def validate(self, data):
+        if data["password"] != data["password_confirm"]:
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+        validate_password(data["password"])
+        return data
+
+
+# ============================================
+# Email Verification Serializers
+# ============================================
+
+class EmailVerificationSerializer(serializers.Serializer):
+    """Serializer for email verification."""
+    
+    token = serializers.CharField()
+
+
+class ResendVerificationSerializer(serializers.Serializer):
+    """Serializer for resending verification email."""
+    
+    email = serializers.EmailField(required=False)
+

@@ -3,8 +3,105 @@ User profile and reader preferences models.
 
 We extend Django's built-in User with a Profile for reader-specific features.
 """
+import secrets
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+
+
+class PasswordResetToken(models.Model):
+    """Token for password reset requests."""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="password_reset_tokens"
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    
+    # Token expires after 1 hour
+    EXPIRY_HOURS = 1
+    
+    class Meta:
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        return f"Password reset for {self.user.username}"
+    
+    @classmethod
+    def create_for_user(cls, user):
+        """Create a new password reset token for a user."""
+        # Invalidate any existing unused tokens
+        cls.objects.filter(user=user, used_at__isnull=True).update(
+            used_at=timezone.now()
+        )
+        # Create new token
+        token = secrets.token_urlsafe(48)
+        return cls.objects.create(user=user, token=token)
+    
+    @property
+    def is_valid(self):
+        """Check if token is still valid (not used and not expired)."""
+        if self.used_at:
+            return False
+        expiry = self.created_at + timedelta(hours=self.EXPIRY_HOURS)
+        return timezone.now() < expiry
+    
+    def mark_used(self):
+        """Mark the token as used."""
+        self.used_at = timezone.now()
+        self.save(update_fields=["used_at"])
+
+
+class EmailVerificationToken(models.Model):
+    """Token for email verification."""
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="email_verification_tokens"
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    email = models.EmailField()  # The email being verified
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    
+    # Token expires after 24 hours
+    EXPIRY_HOURS = 24
+    
+    class Meta:
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        return f"Email verification for {self.user.username} ({self.email})"
+    
+    @classmethod
+    def create_for_user(cls, user, email=None):
+        """Create a new email verification token."""
+        email = email or user.email
+        # Invalidate any existing unused tokens for this email
+        cls.objects.filter(user=user, email=email, verified_at__isnull=True).update(
+            verified_at=timezone.now()
+        )
+        token = secrets.token_urlsafe(48)
+        return cls.objects.create(user=user, token=token, email=email)
+    
+    @property
+    def is_valid(self):
+        """Check if token is still valid."""
+        if self.verified_at:
+            return False
+        expiry = self.created_at + timedelta(hours=self.EXPIRY_HOURS)
+        return timezone.now() < expiry
+    
+    def mark_verified(self):
+        """Mark the email as verified."""
+        self.verified_at = timezone.now()
+        self.save(update_fields=["verified_at"])
 
 
 class UserProfile(models.Model):

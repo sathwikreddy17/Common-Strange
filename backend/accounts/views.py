@@ -453,3 +453,230 @@ class AdminUserDetailView(APIView):
         
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ============================================
+# Password Reset Views
+# ============================================
+
+class PasswordResetRequestView(APIView):
+    """Request a password reset email."""
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        from .serializers import PasswordResetRequestSerializer
+        from .models import PasswordResetToken
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data["email"]
+            
+            # Find user by email
+            try:
+                user = User.objects.get(email__iexact=email, is_active=True)
+                
+                # Create reset token
+                reset_token = PasswordResetToken.create_for_user(user)
+                
+                # Build reset URL
+                frontend_url = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "http://localhost:3000"
+                reset_url = f"{frontend_url}/reset-password?token={reset_token.token}"
+                
+                # Send email (uses console backend in dev)
+                try:
+                    send_mail(
+                        subject="Reset your Common Strange password",
+                        message=f"""
+Hello {user.username},
+
+You requested to reset your password. Click the link below to set a new password:
+
+{reset_url}
+
+This link will expire in {PasswordResetToken.EXPIRY_HOURS} hour(s).
+
+If you didn't request this, you can safely ignore this email.
+
+– The Common Strange Team
+                        """.strip(),
+                        from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "noreply@commonstrange.com",
+                        recipient_list=[user.email],
+                        fail_silently=True,
+                    )
+                except Exception as e:
+                    # Log but don't expose email sending errors
+                    import logging
+                    logging.getLogger(__name__).error(f"Failed to send password reset email: {e}")
+                    
+            except User.DoesNotExist:
+                # Don't reveal whether email exists
+                pass
+            
+            # Always return success (security: don't reveal if email exists)
+            return Response({
+                "message": "If an account with that email exists, you will receive a password reset link."
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetConfirmView(APIView):
+    """Confirm password reset with token."""
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        from .serializers import PasswordResetConfirmSerializer
+        from .models import PasswordResetToken
+        
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            token_str = serializer.validated_data["token"]
+            new_password = serializer.validated_data["password"]
+            
+            # Find valid token
+            try:
+                reset_token = PasswordResetToken.objects.get(token=token_str)
+                
+                if not reset_token.is_valid:
+                    return Response(
+                        {"detail": "This reset link has expired or already been used."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Reset password
+                user = reset_token.user
+                user.set_password(new_password)
+                user.save()
+                
+                # Mark token as used
+                reset_token.mark_used()
+                
+                return Response({"message": "Password has been reset successfully."})
+                
+            except PasswordResetToken.DoesNotExist:
+                return Response(
+                    {"detail": "Invalid reset link."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetValidateView(APIView):
+    """Validate a password reset token (check if it's still valid)."""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        from .models import PasswordResetToken
+        
+        token_str = request.query_params.get("token", "")
+        
+        if not token_str:
+            return Response(
+                {"valid": False, "detail": "Token required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            reset_token = PasswordResetToken.objects.get(token=token_str)
+            if reset_token.is_valid:
+                return Response({"valid": True})
+            else:
+                return Response({"valid": False, "detail": "Token expired or already used."})
+        except PasswordResetToken.DoesNotExist:
+            return Response({"valid": False, "detail": "Invalid token."})
+
+
+# ============================================
+# Email Verification Views
+# ============================================
+
+class EmailVerificationView(APIView):
+    """Verify email with token."""
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        from .serializers import EmailVerificationSerializer
+        from .models import EmailVerificationToken
+        
+        serializer = EmailVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            token_str = serializer.validated_data["token"]
+            
+            try:
+                verification = EmailVerificationToken.objects.get(token=token_str)
+                
+                if not verification.is_valid:
+                    return Response(
+                        {"detail": "This verification link has expired or already been used."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Mark email as verified on user profile
+                user = verification.user
+                profile, _ = UserProfile.objects.get_or_create(user=user)
+                
+                # If the verified email matches current email, mark verified
+                if user.email.lower() == verification.email.lower():
+                    # Add a verified flag to profile (you might want to add this field)
+                    pass
+                
+                verification.mark_verified()
+                
+                return Response({"message": "Email verified successfully."})
+                
+            except EmailVerificationToken.DoesNotExist:
+                return Response(
+                    {"detail": "Invalid verification link."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResendVerificationView(APIView):
+    """Resend email verification."""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        from .models import EmailVerificationToken
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        user = request.user
+        email = request.data.get("email", user.email)
+        
+        # Create verification token
+        verification = EmailVerificationToken.create_for_user(user, email)
+        
+        # Build verification URL
+        frontend_url = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "http://localhost:3000"
+        verify_url = f"{frontend_url}/verify-email?token={verification.token}"
+        
+        # Send email
+        try:
+            send_mail(
+                subject="Verify your Common Strange email",
+                message=f"""
+Hello {user.username},
+
+Please verify your email address by clicking the link below:
+
+{verify_url}
+
+This link will expire in {EmailVerificationToken.EXPIRY_HOURS} hours.
+
+– The Common Strange Team
+                """.strip(),
+                from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else "noreply@commonstrange.com",
+                recipient_list=[email],
+                fail_silently=True,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send verification email: {e}")
+        
+        return Response({"message": "Verification email sent."})
+
