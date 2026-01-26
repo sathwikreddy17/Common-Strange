@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { apiPatch } from "../../_shared";
+import MarkdownEditor from "@/components/MarkdownEditor";
 
 type EditorialArticleDetail = {
   id: number;
@@ -25,6 +26,18 @@ type Props = {
   article: EditorialArticleDetail;
 };
 
+async function revalidateArticle(slug: string) {
+  try {
+    await fetch("/api/revalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug }),
+    });
+  } catch (e) {
+    console.error("Failed to revalidate cache:", e);
+  }
+}
+
 export default function ArticleEditForm({ article }: Props) {
   const [form, setForm] = useState({
     title: article.title,
@@ -42,6 +55,8 @@ export default function ArticleEditForm({ article }: Props) {
     setSuccess(false);
     try {
       await apiPatch(`/v1/editor/articles/${article.id}/`, form);
+      // Revalidate the article page cache so changes appear immediately
+      await revalidateArticle(article.slug);
       setSuccess(true);
     } catch {
       setError("Save failed. Check your permissions and try again.");
@@ -69,11 +84,23 @@ export default function ArticleEditForm({ article }: Props) {
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-zinc-700">Body (Markdown)</label>
-        <textarea
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm min-h-32"
+        <label className="block text-sm font-medium text-zinc-700 mb-2">Body</label>
+        <MarkdownEditor
           value={form.body_md}
-          onChange={(e) => setForm((f) => ({ ...f, body_md: e.target.value }))}
+          onChange={(value) => setForm((f) => ({ ...f, body_md: value }))}
+          placeholder="Write your article content here...
+
+Use the toolbar or type markdown directly:
+# Main Heading
+## Section Heading  
+### Sub Heading
+
+**Bold text** and *italic text*
+
+- Bullet points
+- Another point
+
+> Blockquotes for quotes"
         />
       </div>
       <button

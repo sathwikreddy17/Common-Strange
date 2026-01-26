@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from rest_framework import serializers
 
 from .models import Article, Author, Category, MediaAsset, Series, Tag
@@ -39,9 +40,64 @@ _ALLOWED_ATTRS = {
 }
 
 
+def _preprocess_md(md: str) -> str:
+    """
+    Preprocess markdown to handle line breaks better.
+    - Convert single newlines within paragraphs to <br> markers
+    - Preserve double newlines as paragraph breaks
+    - Handle lists and other block elements properly
+    """
+    if not md:
+        return ""
+    
+    # Normalize line endings
+    md = md.replace('\r\n', '\n').replace('\r', '\n')
+    
+    # Split into lines
+    lines = md.split('\n')
+    result = []
+    
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        
+        # Check if this is a block-level element (heading, list, blockquote, etc.)
+        is_block = (
+            stripped.startswith('#') or           # Heading
+            stripped.startswith('-') or           # Unordered list
+            stripped.startswith('*') and not stripped.endswith('*') or  # Unordered list (not bold)
+            stripped.startswith('>') or           # Blockquote
+            re.match(r'^\d+\.', stripped) or      # Ordered list
+            stripped.startswith('```') or         # Code block
+            stripped.startswith('|') or           # Table
+            stripped == '' or                     # Empty line
+            stripped == '---' or                  # Horizontal rule
+            stripped == '***'                     # Horizontal rule
+        )
+        
+        if is_block:
+            result.append(line)
+        else:
+            # For regular text lines, add two spaces at the end for line break
+            # (except for the last line before an empty line)
+            next_line = lines[i + 1].strip() if i + 1 < len(lines) else ''
+            if next_line and not next_line.startswith('#') and not next_line.startswith('-') and not next_line.startswith('>') and not re.match(r'^\d+\.', next_line):
+                # Add two spaces at end to create a hard line break in markdown
+                result.append(line + '  ')
+            else:
+                result.append(line)
+    
+    return '\n'.join(result)
+
+
 def _render_md(md: str) -> str:
-    """Render Markdown to sanitized HTML."""
-    html = _md_renderer(md or "")
+    """Render Markdown to sanitized HTML with line break preservation."""
+    # Preprocess to handle line breaks
+    processed_md = _preprocess_md(md or "")
+    
+    # Render markdown to HTML
+    html = _md_renderer(processed_md)
+    
+    # Sanitize HTML
     return bleach.clean(
         html,
         tags=_ALLOWED_TAGS,

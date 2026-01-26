@@ -33,6 +33,9 @@ The following issues identified in this document have been **resolved**:
 - ✅ **Security headers** (HSTS, X-Content-Type-Options, X-Frame-Options)
 - ✅ **DATABASE_URL support** with dj-database-url
 - ✅ **Updated render.yaml** with health checks, Redis, cleanup cron
+- ✅ **Markdown Editor** with formatting toolbar (bold, italic, headings, lists, etc.)
+- ✅ **Line break preservation** in markdown rendering
+- ✅ **Cache revalidation** on article save (immediate updates on homepage/article pages)
 
 ### New Packages Added:
 - `bleach>=6.1` - XSS sanitization
@@ -113,6 +116,9 @@ Remaining work:
 | Favicons & Icons | ✅ Complete | SVG icons for all platforms |
 | OG Images | ✅ Complete | Default OG image for social sharing |
 | Meta Tags | ✅ Complete | SEO metadata on all pages |
+| Markdown Editor | ✅ Complete | Toolbar with H1-H4, bold, italic, lists, blockquote, code, links |
+| Article Formatting | ✅ Complete | Line breaks, typography styles (prose CSS) |
+| Cache Revalidation | ✅ Complete | Instant updates after article save |
 
 ---
 
@@ -156,11 +162,16 @@ frontend/src/app/
 ├── [slug]/page.tsx   # 677 lines - Article rendering with all widgets
 ├── sitemap.ts        # 187 lines - Comprehensive sitemap
 ├── robots.ts         # Standard robots.txt
+├── api/revalidate/   # Cache revalidation API endpoint
 ├── editor/           # Full editorial UI
 │   ├── articles/     # Draft/edit/widget management
 │   ├── modules/      # Curated module management
 │   └── _components/  # Shared editor components
 └── categories|authors|series|tags/  # Hub pages
+
+frontend/src/components/
+├── MarkdownEditor.tsx # Rich markdown editor with formatting toolbar
+└── ...               # Other shared components
 ```
 
 ### Infrastructure
@@ -198,6 +209,9 @@ frontend/src/app/
 - [x] Celery tasks for async processing
 - [x] Trigram indexes for typo-tolerant search
 - [x] Public trending endpoint
+- [x] Markdown editor with formatting toolbar (bold, italic, headings, lists, blockquotes, code)
+- [x] Line break preservation in article body rendering
+- [x] Cache revalidation API for instant article updates
 
 ### 🔧 Deployment Configuration Required
 

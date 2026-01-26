@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiPost, ApiError } from "../../_shared";
+import MarkdownEditor from "@/components/MarkdownEditor";
 
 function formatApiError(err: unknown): string {
   if (err instanceof ApiError && err.body) {
@@ -155,14 +156,13 @@ export default function NewArticlePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700">
-              Body <span className="text-zinc-400">(Markdown)</span>
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
+              Body
             </label>
-            <textarea
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-zinc-900 font-mono text-sm min-h-[200px] focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+            <MarkdownEditor
               value={form.body_md}
-              onChange={(e) => setForm((f) => ({ ...f, body_md: e.target.value }))}
-              placeholder="Write your article content in Markdown..."
+              onChange={(value) => setForm((f) => ({ ...f, body_md: value }))}
+              placeholder="Write your article content here..."
             />
           </div>
 
