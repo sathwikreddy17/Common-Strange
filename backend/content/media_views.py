@@ -9,13 +9,13 @@ from rest_framework.views import APIView
 
 from .media_pipeline import image_variants_webp
 from .models import MediaAsset
-from .permissions import IsEditor
+from .permissions import IsWriter
 from .serializers_media import MediaAssetSerializer, MediaUploadSerializer
 from .storage import guess_content_type, key_join, put_bytes
 
 
 class EditorMediaUploadView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsEditor]
+    permission_classes = [permissions.IsAuthenticated, IsWriter]
 
     def post(self, request):
         ser = MediaUploadSerializer(data=request.data)
@@ -93,7 +93,7 @@ class PublicMediaAssetDetailView(APIView):
 
 
 class EditorMediaRecentView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsEditor]
+    permission_classes = [permissions.IsAuthenticated, IsWriter]
 
     def get(self, request):
         limit_raw = request.query_params.get("limit", "24")

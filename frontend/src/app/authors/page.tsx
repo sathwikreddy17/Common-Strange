@@ -1,5 +1,11 @@
 import Link from "next/link";
+import { Metadata } from "next";
 import { fetchList } from "@/lib/api";
+
+export const metadata: Metadata = {
+  title: "Authors",
+  description: "Meet the writers and contributors at Common Strange.",
+};
 
 type Author = {
   name: string;

@@ -57,6 +57,28 @@ type TrendingItem = {
   published_at?: string | null;
 };
 
+type CuratedModuleItem = {
+  id: number;
+  order: number;
+  item_type: "ARTICLE" | "CATEGORY" | "SERIES" | "AUTHOR";
+  override_title: string;
+  override_dek: string;
+  article: { id: number; title: string; slug: string; dek: string } | null;
+  category: { name: string; slug: string; description?: string } | null;
+  series: { name: string; slug: string; description?: string } | null;
+  author: { name: string; slug: string; bio?: string } | null;
+};
+
+type CuratedModule = {
+  id: number;
+  placement: "HOME" | "CATEGORY" | "SERIES" | "AUTHOR";
+  title: string;
+  subtitle: string;
+  order: number;
+  is_active: boolean;
+  items: CuratedModuleItem[];
+};
+
 async function fetchArticles(): Promise<PublicArticleListItem[]> {
   try {
     const res = await fetch(`${API_BASE}/v1/articles?status=published`);
@@ -78,6 +100,17 @@ async function fetchTrending(): Promise<TrendingItem[]> {
     if (!res.ok) return [];
     const data = (await res.json()) as unknown;
     return Array.isArray(data) ? (data as TrendingItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchCuratedModules(): Promise<CuratedModule[]> {
+  try {
+    const res = await fetch(`${API_BASE}/v1/home/modules/`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as unknown;
+    return Array.isArray(data) ? (data as CuratedModule[]) : [];
   } catch {
     return [];
   }
@@ -131,11 +164,18 @@ function Header({ onSearchOpen, onMenuOpen, user }: { onSearchOpen: () => void; 
           <Link href="/series" className="text-zinc-600 hover:text-zinc-900 transition-colors">Series</Link>
           <Link href="/authors" className="text-zinc-600 hover:text-zinc-900 transition-colors">Authors</Link>
           {user ? (
-            <Link href="/account" className="text-zinc-600 hover:text-zinc-900 transition-colors flex items-center gap-1">
-              <span className="w-6 h-6 rounded-full bg-zinc-200 flex items-center justify-center text-xs font-medium">
-                {user.display_name?.charAt(0).toUpperCase() || user.username.charAt(0).toUpperCase()}
-              </span>
-            </Link>
+            <>
+              {(user.role === "writer" || user.role === "editor" || user.role === "publisher" || user.is_staff) && (
+                <Link href="/editor" className="text-zinc-600 hover:text-zinc-900 transition-colors font-medium">
+                  ✏️ Write
+                </Link>
+              )}
+              <Link href="/account" className="text-zinc-600 hover:text-zinc-900 transition-colors flex items-center gap-1">
+                <span className="w-6 h-6 rounded-full bg-zinc-200 flex items-center justify-center text-xs font-medium">
+                  {user.display_name?.charAt(0).toUpperCase() || user.username.charAt(0).toUpperCase()}
+                </span>
+              </Link>
+            </>
           ) : (
             <Link href="/login" className="text-zinc-600 hover:text-zinc-900 transition-colors">Sign in</Link>
           )}
@@ -146,8 +186,10 @@ function Header({ onSearchOpen, onMenuOpen, user }: { onSearchOpen: () => void; 
 }
 
 // Mobile Menu Overlay
-function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function MobileMenu({ isOpen, onClose, user }: { isOpen: boolean; onClose: () => void; user: UserData | null }) {
   if (!isOpen) return null;
+  
+  const isStaff = user && (user.role === "writer" || user.role === "editor" || user.role === "publisher" || user.is_staff);
   
   return (
     <div className="fixed inset-0 z-[100]">
@@ -170,6 +212,18 @@ function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
         </div>
         
         <nav className="px-6 py-8">
+          {isStaff && (
+            <div className="mb-6 pb-6 border-b border-zinc-200">
+              <Link 
+                href="/editor" 
+                onClick={onClose} 
+                className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+              >
+                ✏️ Write / Editor Dashboard
+              </Link>
+            </div>
+          )}
+          
           <ul className="space-y-6">
             <li>
               <Link href="/categories" onClick={onClose} className="text-lg font-medium text-zinc-900 hover:text-zinc-600">
@@ -193,7 +247,30 @@ function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
             </li>
           </ul>
           
-          <div className="mt-12 border-t border-zinc-200 pt-8">
+          <div className="mt-8 pt-6 border-t border-zinc-200">
+            {user ? (
+              <Link 
+                href="/account" 
+                onClick={onClose}
+                className="flex items-center gap-3 text-zinc-700 hover:text-zinc-900"
+              >
+                <span className="w-8 h-8 rounded-full bg-zinc-200 flex items-center justify-center text-sm font-medium">
+                  {user.display_name?.charAt(0).toUpperCase() || user.username.charAt(0).toUpperCase()}
+                </span>
+                <span>{user.display_name || user.username}</span>
+              </Link>
+            ) : (
+              <Link 
+                href="/login" 
+                onClick={onClose}
+                className="text-lg font-medium text-zinc-900 hover:text-zinc-600"
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
+          
+          <div className="mt-8 border-t border-zinc-200 pt-8">
             <p className="text-xs uppercase tracking-wide text-zinc-500">About</p>
             <p className="mt-4 text-sm leading-relaxed text-zinc-600">
               Common Strange explores ideas that expand your perspective. Long-form essays, thoughtful analysis, and stories that matter.
@@ -493,6 +570,72 @@ function NewsletterCTA() {
   );
 }
 
+function CuratedModulesSection({ modules }: { modules: CuratedModule[] }) {
+  if (!modules.length) return null;
+  
+  return (
+    <section className="mx-auto max-w-7xl px-6 py-16">
+      {modules.map((module) => (
+        <div key={module.id} className="mb-12 last:mb-0">
+          <div className="mb-8 border-b border-zinc-200 pb-4">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              {module.title}
+            </h2>
+            {module.subtitle && (
+              <p className="mt-2 text-sm text-zinc-600">{module.subtitle}</p>
+            )}
+          </div>
+          
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {module.items.slice(0, 6).map((item) => {
+              const title = item.override_title || 
+                (item.item_type === "ARTICLE" ? item.article?.title : 
+                 item.item_type === "CATEGORY" ? item.category?.name :
+                 item.item_type === "SERIES" ? item.series?.name :
+                 item.author?.name) || "";
+              
+              const dek = item.override_dek ||
+                (item.item_type === "ARTICLE" ? item.article?.dek :
+                 item.item_type === "CATEGORY" ? item.category?.description :
+                 item.item_type === "SERIES" ? item.series?.description :
+                 item.author?.bio) || "";
+              
+              const href = item.item_type === "ARTICLE" ? `/${item.article?.slug}` :
+                item.item_type === "CATEGORY" ? `/categories/${item.category?.slug}` :
+                item.item_type === "SERIES" ? `/series/${item.series?.slug}` :
+                `/authors/${item.author?.slug}`;
+              
+              const typeLabel = item.item_type === "ARTICLE" ? null :
+                item.item_type === "CATEGORY" ? "Category" :
+                item.item_type === "SERIES" ? "Series" : "Author";
+              
+              return (
+                <Link 
+                  key={item.id} 
+                  href={href}
+                  className="group block rounded-sm border border-zinc-200 p-5 hover:border-zinc-400 hover:shadow-sm transition-all"
+                >
+                  {typeLabel && (
+                    <span className="mb-2 inline-block rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      {typeLabel}
+                    </span>
+                  )}
+                  <h3 className="font-serif text-lg font-bold text-zinc-900 group-hover:text-zinc-600 transition-colors leading-snug">
+                    {title}
+                  </h3>
+                  {dek && (
+                    <p className="mt-2 text-sm text-zinc-600 line-clamp-2">{dek}</p>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function TrendingSidebar({ items }: { items: TrendingItem[] }) {
   if (!items.length) return null;
   
@@ -579,6 +722,7 @@ async function fetchCurrentUser(): Promise<UserData | null> {
 export default function Home() {
   const [articles, setArticles] = useState<PublicArticleListItem[]>([]);
   const [trending, setTrending] = useState<TrendingItem[]>([]);
+  const [curatedModules, setCuratedModules] = useState<CuratedModule[]>([]);
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -600,16 +744,18 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        const [data, trendingData, userData] = await Promise.all([
+        const [data, trendingData, userData, modulesData] = await Promise.all([
           fetchArticles(),
           fetchTrending(),
           fetchCurrentUser(),
+          fetchCuratedModules(),
         ]);
 
         if (cancelled) return;
         setArticles(Array.isArray(data) ? data : []);
         setTrending(Array.isArray(trendingData) ? trendingData : []);
         setUser(userData);
+        setCuratedModules(Array.isArray(modulesData) ? modulesData : []);
       } catch (err) {
         if (cancelled) return;
         console.error("Home fetch error:", err);
@@ -660,7 +806,7 @@ export default function Home() {
     return (
       <>
         <Header onMenuOpen={() => setMenuOpen(true)} onSearchOpen={() => setSearchOpen(true)} user={user} />
-        <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+        <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} user={user} />
         <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
         <main className="flex min-h-[50vh] items-center justify-center">
           <div className="text-center">
@@ -676,7 +822,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <Header onMenuOpen={() => setMenuOpen(true)} onSearchOpen={() => setSearchOpen(true)} user={user} />
-      <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} user={user} />
       <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       
       {/* Hero Section */}
@@ -693,6 +839,9 @@ export default function Home() {
           </div>
         </section>
       )}
+      
+      {/* Curated Modules */}
+      <CuratedModulesSection modules={curatedModules} />
       
       {/* Newsletter CTA */}
       <NewsletterCTA />

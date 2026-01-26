@@ -312,10 +312,17 @@ class ArticleSearchView(generics.ListAPIView):
 class _EditorTaxonomyPermissionMixin:
     """Shared access policy for taxonomy management.
 
-    PoC rule: Editors (and superusers) can manage taxonomy.
+    Writers can read (GET) taxonomy for article assignment.
+    Editors (and superusers) can create/update/delete taxonomy.
     """
 
-    permission_classes = [permissions.IsAuthenticated, IsEditor]
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            # Read-only: Writers can access
+            return [permissions.IsAuthenticated(), IsWriter()]
+        else:
+            # Write operations: Editors only
+            return [permissions.IsAuthenticated(), IsEditor()]
 
 
 class EditorCategoryListCreateView(_EditorTaxonomyPermissionMixin, generics.ListCreateAPIView):

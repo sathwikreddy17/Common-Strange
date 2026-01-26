@@ -57,10 +57,10 @@ This document tracks all features and fixes needed before going live.
 | 6 | Password reset flow | Medium | ✅ |
 | 7 | Email verification | Medium | ✅ |
 | 8 | HTTPS-only cookies in prod | Low | ✅ |
-| 9 | Image optimization in frontend (next/image) | Low | ⬜ |
+| 9 | Image optimization in frontend (next/image) | Low | ✅ |
 | 10 | Meta tags on all pages (title, description) | Medium | ✅ |
-| 11 | Favicon + app icons | Low | ⬜ |
-| 12 | OG images for non-article pages | Medium | ⬜ |
+| 11 | Favicon + app icons | Low | ✅ |
+| 12 | OG images for non-article pages | Medium | ✅ |
 
 ---
 
@@ -68,11 +68,11 @@ This document tracks all features and fixes needed before going live.
 
 | # | Feature | Effort | Status |
 |---|---------|--------|--------|
-| 13 | Curated homepage modules (Aeon-like) | High | ⬜ |
-| 14 | Category hub curated sections | High | ⬜ |
-| 15 | Analytics dashboard for editors | Medium | ⬜ |
-| 16 | Search ranking boosts (editor picks, recency) | Medium | ⬜ |
-| 17 | Google News sitemap | Low | ⬜ |
+| 13 | Curated homepage modules (Aeon-like) | High | ✅ |
+| 14 | Category hub curated sections | High | ✅ |
+| 15 | Analytics dashboard for editors | Medium | ✅ |
+| 16 | Search ranking boosts (editor picks, recency) | Medium | ✅ |
+| 17 | Google News sitemap | Low | ✅ |
 | 18 | OAuth social login (Google/GitHub) | Medium | ⬜ |
 | 19 | Comments system | High | ⬜ |
 | 20 | Video metadata model | Medium | ⬜ |
@@ -130,4 +130,4 @@ This document tracks all features and fixes needed before going live.
 
 ---
 
-*Last updated: January 25, 2026*
+*Last updated: January 26, 2026*

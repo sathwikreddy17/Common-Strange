@@ -1,5 +1,11 @@
 import Link from "next/link";
+import { Metadata } from "next";
 import { fetchList } from "@/lib/api";
+
+export const metadata: Metadata = {
+  title: "Tags",
+  description: "Browse all tags on Common Strange. Discover articles by topic.",
+};
 
 type Tag = {
   name: string;

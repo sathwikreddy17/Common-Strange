@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -591,12 +592,14 @@ export default async function ArticlePage({
           {/* Hero Image */}
           {article.hero_image && (article.hero_image.large || article.hero_image.medium || article.hero_image.original) ? (
             <figure className="mb-10 overflow-hidden rounded-2xl">
-              <img
+              <Image
                 src={article.hero_image.large || article.hero_image.medium || article.hero_image.original || ""}
                 alt={article.hero_image.alt || article.title}
-                width={article.hero_image.width || undefined}
-                height={article.hero_image.height || undefined}
+                width={article.hero_image.width || 1200}
+                height={article.hero_image.height || 675}
                 className="w-full object-cover"
+                priority
+                unoptimized
               />
             </figure>
           ) : null}

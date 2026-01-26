@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiPost } from "../../_shared";
 
 type Props = {
@@ -11,17 +12,25 @@ type Props = {
 type ActionBody = unknown;
 
 export default function WorkflowButtons({ id, status }: Props) {
+  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  async function doAction(action: string, body?: ActionBody) {
+  async function doAction(action: string, body?: ActionBody, redirectAfter = true) {
     setLoading(action);
     setError(null);
     setSuccess(null);
     try {
       await apiPost(`/v1/editor/articles/${id}/${action}/`, body ?? {});
       setSuccess(`Action '${action}' succeeded.`);
+      
+      // Redirect to pipeline after successful workflow actions
+      if (redirectAfter && action !== "preview_token") {
+        setTimeout(() => {
+          router.push("/editor/pipeline");
+        }, 800);
+      }
     } catch {
       setError(`Action '${action}' failed.`);
     } finally {
@@ -70,7 +79,7 @@ export default function WorkflowButtons({ id, status }: Props) {
         )}
       </div>
       {error ? <div className="text-sm text-red-700">{error}</div> : null}
-      {success ? <div className="text-sm text-green-700">{success}</div> : null}
+      {success ? <div className="text-sm text-green-700">{success} Redirecting to pipeline...</div> : null}
     </div>
   );
 }

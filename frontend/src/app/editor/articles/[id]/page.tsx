@@ -71,11 +71,15 @@ export default async function EditorArticleEditPage({ params }: { params: Promis
           </div>
 
           <nav className="flex items-center gap-4 text-sm">
-            <Link className="text-zinc-700 hover:underline" href="/editor/articles">
-              Back to list
+            <Link className="text-zinc-700 hover:underline font-medium" href="/editor/pipeline">
+              ← Pipeline
             </Link>
-            <Link className="text-zinc-700 hover:underline" href="/">
-              Home
+            <span className="text-zinc-300">|</span>
+            <Link className="text-zinc-500 hover:underline" href="/editor/articles">
+              All articles
+            </Link>
+            <Link className="text-zinc-500 hover:underline" href="/editor">
+              Dashboard
             </Link>
           </nav>
         </div>

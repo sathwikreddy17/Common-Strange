@@ -1,7 +1,7 @@
 from django.urls import include, path
 
 from . import views
-from .events_views import EditorTrendingView, PageviewEventView, PublicTrendingView, ReadEventView
+from .events_views import EditorTrendingView, EditorAnalyticsView, EditorPipelineView, PageviewEventView, PublicTrendingView, ReadEventView
 from .health_views import HealthView
 from .news_sitemap import google_news_sitemap
 from .og_views import PublicMediaView
@@ -95,6 +95,12 @@ urlpatterns = [
 
                 # Trending (editor-only)
                 path("trending/", EditorTrendingView.as_view(), name="editor-trending"),
+                
+                # Analytics dashboard
+                path("analytics/", EditorAnalyticsView.as_view(), name="editor-analytics"),
+                
+                # Editorial pipeline
+                path("pipeline/", EditorPipelineView.as_view(), name="editor-pipeline"),
 
                 # Taxonomy
                 path("categories/", views.EditorCategoryListCreateView.as_view(), name="editor-categories"),

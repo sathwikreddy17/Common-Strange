@@ -3,7 +3,35 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { apiPost } from "../../_shared";
+import { apiPost, ApiError } from "../../_shared";
+
+function formatApiError(err: unknown): string {
+  if (err instanceof ApiError && err.body) {
+    // Handle DRF validation errors (e.g., { "slug": ["article with this slug already exists."] })
+    if (typeof err.body === "object" && err.body !== null) {
+      const errors = err.body as Record<string, string[]>;
+      const messages: string[] = [];
+      for (const [field, fieldErrors] of Object.entries(errors)) {
+        if (Array.isArray(fieldErrors)) {
+          messages.push(`${field}: ${fieldErrors.join(", ")}`);
+        } else if (typeof fieldErrors === "string") {
+          messages.push(`${field}: ${fieldErrors}`);
+        }
+      }
+      if (messages.length > 0) {
+        return messages.join("; ");
+      }
+    }
+    // Fallback to string body
+    if (typeof err.body === "string") {
+      return err.body;
+    }
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return "Failed to create article. Check permissions and try again.";
+}
 
 function slugify(text: string): string {
   return text
@@ -60,11 +88,7 @@ export default function NewArticlePage() {
       });
       router.push(`/editor/articles/${result.id}`);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Failed to create article. Check permissions and try again.");
-      }
+      setError(formatApiError(err));
     } finally {
       setSaving(false);
     }
