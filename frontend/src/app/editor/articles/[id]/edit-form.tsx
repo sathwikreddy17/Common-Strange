@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { apiPatch } from "../../_shared";
-import MarkdownEditor from "@/components/MarkdownEditor";
+import ArticleEditor from "@/components/ArticleEditor";
 
 type EditorialArticleDetail = {
   id: number;
@@ -48,70 +48,96 @@ export default function ArticleEditForm({ article }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const handleSave = useCallback(async () => {
     setSaving(true);
     setError(null);
     setSuccess(false);
     try {
       await apiPatch(`/v1/editor/articles/${article.id}/`, form);
-      // Revalidate the article page cache so changes appear immediately
       await revalidateArticle(article.slug);
       setSuccess(true);
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(false), 3000);
     } catch {
       setError("Save failed. Check your permissions and try again.");
     } finally {
       setSaving(false);
     }
+  }, [article.id, article.slug, form]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await handleSave();
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-zinc-700">Title</label>
-        <input
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-          value={form.title}
-          onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-        />
+      {/* Title & Dek in a compact header section */}
+      <div className="grid grid-cols-1 gap-4 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
+        <div>
+          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+            Article Title
+          </label>
+          <input
+            className="w-full rounded-lg border border-zinc-300 px-4 py-3 text-xl font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all"
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            placeholder="Enter your article title..."
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+            Dek (Subtitle)
+          </label>
+          <input
+            className="w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-base text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent transition-all"
+            value={form.dek}
+            onChange={(e) => setForm((f) => ({ ...f, dek: e.target.value }))}
+            placeholder="A brief description or subtitle for your article..."
+          />
+        </div>
       </div>
+
+      {/* Full-height Article Editor */}
       <div>
-        <label className="block text-sm font-medium text-zinc-700">Dek</label>
-        <input
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-          value={form.dek}
-          onChange={(e) => setForm((f) => ({ ...f, dek: e.target.value }))}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-2">Body</label>
-        <MarkdownEditor
+        <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
+          Article Body
+        </label>
+        <ArticleEditor
           value={form.body_md}
           onChange={(value) => setForm((f) => ({ ...f, body_md: value }))}
-          placeholder="Write your article content here...
+          onSave={handleSave}
+          isSaving={saving}
+          placeholder={`Start writing your article here...
 
-Use the toolbar or type markdown directly:
-# Main Heading
-## Section Heading  
-### Sub Heading
+Tips:
+• Use # for headings (# H1, ## H2, ### H3)
+• **Bold** and *italic* formatting
+• Create lists with - or 1. 2. 3.
+• Add quotes with > at the start of a line
+• Use the toolbar above or keyboard shortcuts
 
-**Bold text** and *italic text*
-
-- Bullet points
-- Another point
-
-> Blockquotes for quotes"
+Press Ctrl+\\ for fullscreen mode`}
         />
       </div>
-      <button
-        type="submit"
-        className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
-        disabled={saving}
-      >
-        {saving ? "Saving…" : "Save"}
-      </button>
-      {error ? <div className="text-sm text-red-700">{error}</div> : null}
-      {success ? <div className="text-sm text-green-700">Saved!</div> : null}
+
+      {/* Status messages */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+          <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Article saved successfully!
+        </div>
+      )}
     </form>
   );
 }

@@ -113,6 +113,10 @@ export default function MarkdownEditor({
 
   // Simple markdown to HTML for preview
   const renderPreview = (md: string) => {
+    // First, handle bold numbered headings like **1. Title** -> <h2>
+    md = md.replace(/^\*\*(\d+)\.\s*\**([^*\n]+)\*+\s*$/gm, "<h2><strong>$1. $2</strong></h2>");
+    md = md.replace(/^\*\*(\d+)\.\s*([^*\n]+)$/gm, "<h2><strong>$1. $2</strong></h2>");
+    
     let html = md
       // Headers
       .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
@@ -131,10 +135,10 @@ export default function MarkdownEditor({
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
       // Blockquotes
       .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
-      // Unordered lists
-      .replace(/^- (.+)$/gm, "<li>$1</li>")
-      // Ordered lists
-      .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
+      // Unordered lists (only - and •, not * which conflicts with bold)
+      .replace(/^[-•] (.+)$/gm, "<li>$1</li>")
+      // Ordered lists (only when NOT starting with **)
+      .replace(/^(\d+)\. (?!\*)(.+)$/gm, "<li>$2</li>")
       // Horizontal rule
       .replace(/^---$/gm, "<hr>")
       // Paragraphs (double newlines)

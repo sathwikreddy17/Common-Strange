@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiPost, ApiError } from "../../_shared";
-import MarkdownEditor from "@/components/MarkdownEditor";
+import ArticleEditor from "@/components/ArticleEditor";
 
 function formatApiError(err: unknown): string {
   if (err instanceof ApiError && err.body) {
@@ -159,9 +159,9 @@ export default function NewArticlePage() {
             <label className="block text-sm font-medium text-zinc-700 mb-2">
               Body
             </label>
-            <MarkdownEditor
+            <ArticleEditor
               value={form.body_md}
-              onChange={(value) => setForm((f) => ({ ...f, body_md: value }))}
+              onChange={(value: string) => setForm((f) => ({ ...f, body_md: value }))}
               placeholder="Write your article content here..."
             />
           </div>

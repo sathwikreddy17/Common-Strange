@@ -167,12 +167,38 @@ Editor UI:
 - `/editor/articles/new` create new articles
 - `/editor/articles/[id]` edit articles:
   - Title, dek, body markdown
+  - **ArticleEditor** - Split-view markdown editor with live preview
   - Hero image upload with preview
   - Taxonomy assignment (category, series, authors, tags)
   - Workflow buttons (submit/approve/schedule/publish)
 - `/editor/media` upload + lookup + recent uploads picker
 - `/editor/users` user management (Publisher only)
 - Consistent navigation with Home links throughout
+
+### Markdown Rendering System
+The platform uses a unified markdown rendering approach between editor preview and public frontend:
+
+**Backend Processing** (`serializers.py`):
+- Converts markdown to sanitized HTML using `mistune` library
+- Smart preprocessing handles bold numbered headings (`**1. Title**`)
+- **Section Detection**: Distinguishes main sections (h2) from sub-sections (h4)
+  - Main sections: Sequential numbered headings (1, 2, 3, 4...)
+  - Sub-sections: When numbering resets to 1 within a section
+- XSS protection via `bleach` sanitization
+- Line break preservation within paragraphs
+
+**Frontend Editor** (`ArticleEditor.tsx`):
+- Split-view editor with Edit/Split/Preview modes
+- Matching preview parser for editor-frontend parity
+- Same smart heading detection as backend
+- Real-time word count and reading time estimates
+- Keyboard shortcuts (Ctrl+S save, Ctrl+B bold, Ctrl+I italic)
+- Fullscreen editing mode (Ctrl+\\)
+
+**Typography** (`globals.css`):
+- h2: Main section headings (1.5em, bold, prominent spacing)
+- h4: Sub-section headings (1.1em, semibold, tighter spacing)
+- Proper list styling and paragraph spacing
 
 Auth pages:
 - `/login` user login with Home link

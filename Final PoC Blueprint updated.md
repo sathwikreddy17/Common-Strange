@@ -36,6 +36,9 @@ The following issues identified in this document have been **resolved**:
 - ✅ **Markdown Editor** with formatting toolbar (bold, italic, headings, lists, etc.)
 - ✅ **Line break preservation** in markdown rendering
 - ✅ **Cache revalidation** on article save (immediate updates on homepage/article pages)
+- ✅ **Smart Heading Detection** - Distinguishes main sections (h2) from sub-sections (h4) automatically
+- ✅ **Editor-Frontend Parity** - ArticleEditor preview matches public site rendering exactly
+- ✅ **Typography Hierarchy** - Clear visual distinction between heading levels
 
 ### New Packages Added:
 - `bleach>=6.1` - XSS sanitization

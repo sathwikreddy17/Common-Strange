@@ -42,10 +42,12 @@ _ALLOWED_ATTRS = {
 
 def _preprocess_md(md: str) -> str:
     """
-    Preprocess markdown to handle line breaks better.
-    - Convert single newlines within paragraphs to <br> markers
-    - Preserve double newlines as paragraph breaks
-    - Handle lists and other block elements properly
+    Preprocess markdown to handle line breaks and formatting properly.
+    - Converts bold numbered headings like **1. Title** to proper headings
+    - Distinguishes main sections (##) from sub-sections (####)
+    - Preserves numbered lists with correct sequence
+    - Ensures proper spacing between blocks
+    - Handles line breaks within paragraphs
     """
     if not md:
         return ""
@@ -53,36 +55,98 @@ def _preprocess_md(md: str) -> str:
     # Normalize line endings
     md = md.replace('\r\n', '\n').replace('\r', '\n')
     
-    # Split into lines
+    # Clean up malformed bold markers (e.g., ****7. **Title****** -> **7. Title**)
+    md = re.sub(r'\*{3,}(\d+\.)', r'**\1', md)  # Fix leading excess asterisks
+    md = re.sub(r'\*{3,}$', '**', md, flags=re.MULTILINE)  # Fix trailing excess asterisks
+    
+    # Split into lines for smarter heading detection
     lines = md.split('\n')
     result = []
+    seen_main_sections = set()  # Track which main section numbers we've seen
+    in_subsection_context = False  # Are we inside a section that has sub-items?
+    last_main_section_num = 0
     
     for i, line in enumerate(lines):
         stripped = line.strip()
         
-        # Check if this is a block-level element (heading, list, blockquote, etc.)
-        is_block = (
-            stripped.startswith('#') or           # Heading
-            stripped.startswith('-') or           # Unordered list
-            stripped.startswith('*') and not stripped.endswith('*') or  # Unordered list (not bold)
-            stripped.startswith('>') or           # Blockquote
-            re.match(r'^\d+\.', stripped) or      # Ordered list
-            stripped.startswith('```') or         # Code block
-            stripped.startswith('|') or           # Table
-            stripped == '' or                     # Empty line
-            stripped == '---' or                  # Horizontal rule
-            stripped == '***'                     # Horizontal rule
+        # Check for bold numbered heading pattern: **N. Title** or **N. Title
+        bold_num_match = re.match(r'^\*\*(\d+)\.\s*\**([^*\n]+?)\**\s*$', stripped)
+        if not bold_num_match:
+            # Also try unclosed pattern: **N. Title (no closing **)
+            bold_num_match = re.match(r'^\*\*(\d+)\.\s*([^*\n]+)$', stripped)
+        
+        if bold_num_match:
+            num = int(bold_num_match.group(1))
+            title = bold_num_match.group(2).strip().rstrip('*').strip()
+            
+            # Determine if this is a main section or sub-section:
+            # - If the number resets to 1 after we've seen higher numbers, it's likely a sub-section
+            # - If it's a continuation of the sequence, it's a main section
+            # - Sub-sections typically restart numbering (1, 2, 3, 4) within a main section
+            
+            is_subsection = False
+            
+            if num == 1 and last_main_section_num > 0:
+                # Number reset to 1 after we've had other sections - this is a sub-section
+                is_subsection = True
+                in_subsection_context = True
+            elif in_subsection_context and num <= 10:
+                # We're in a sub-section context and seeing low numbers
+                # Check if this could be continuing the main sequence
+                if num == last_main_section_num + 1 and num not in seen_main_sections:
+                    # Likely returning to main sections
+                    is_subsection = False
+                    in_subsection_context = False
+                else:
+                    is_subsection = True
+            elif num in seen_main_sections:
+                # We've seen this number before as a main section, so this must be a sub-section
+                is_subsection = True
+            
+            if is_subsection:
+                # Use h4 for sub-sections (smaller heading)
+                result.append(f'#### {num}. {title}')
+            else:
+                # Use h2 for main sections
+                result.append(f'## {num}. {title}')
+                seen_main_sections.add(num)
+                last_main_section_num = num
+            continue
+        
+        # Handle regular line processing for line breaks
+        is_heading = stripped.startswith('#')
+        is_bullet = bool(re.match(r'^[-•]\s+', stripped)) or bool(re.match(r'^\*\s+[^*]', stripped))
+        is_numbered = bool(re.match(r'^\d+\.\s+[^*]', stripped)) or bool(re.match(r'^\d+\.\*\*', stripped))
+        is_blockquote = stripped.startswith('>')
+        is_code_fence = stripped.startswith('```')
+        is_hr = stripped in ('---', '***', '___')
+        is_empty = stripped == ''
+        is_list = is_bullet or is_numbered
+        is_block = is_heading or is_list or is_blockquote or is_code_fence or is_hr or is_empty
+        
+        # Get info about next line
+        next_line = lines[i + 1].strip() if i + 1 < len(lines) else ''
+        next_is_bullet = bool(re.match(r'^[-•]\s+', next_line)) or bool(re.match(r'^\*\s+[^*]', next_line))
+        next_is_numbered = bool(re.match(r'^\d+\.\s+[^*]', next_line)) or bool(re.match(r'^\d+\.\*\*', next_line))
+        next_is_bold_num = bool(re.match(r'^\*\*\d+\.', next_line))
+        next_is_list = next_is_bullet or next_is_numbered
+        next_is_block = (
+            next_line.startswith('#') or 
+            next_is_list or 
+            next_is_bold_num or
+            next_line.startswith('>') or 
+            next_line.startswith('```') or
+            next_line in ('---', '***', '___') or
+            next_line == ''
         )
         
         if is_block:
             result.append(line)
         else:
-            # For regular text lines, add two spaces at the end for line break
-            # (except for the last line before an empty line)
-            next_line = lines[i + 1].strip() if i + 1 < len(lines) else ''
-            if next_line and not next_line.startswith('#') and not next_line.startswith('-') and not next_line.startswith('>') and not re.match(r'^\d+\.', next_line):
-                # Add two spaces at end to create a hard line break in markdown
-                result.append(line + '  ')
+            # For regular text lines not followed by a block, add soft line break
+            if not next_is_block and next_line:
+                # Add two spaces for a soft line break in markdown
+                result.append(line.rstrip() + '  ')
             else:
                 result.append(line)
     
