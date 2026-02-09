@@ -239,6 +239,8 @@ REST_FRAMEWORK = {
         "events": os.environ.get("EVENTS_THROTTLE_RATE", "60/min"),
         # General API rate limit
         "api": os.environ.get("API_THROTTLE_RATE", "100/min"),
+        # Auth endpoints (login, register, password-reset) — stricter to deter brute-force
+        "auth": os.environ.get("AUTH_THROTTLE_RATE", "10/min"),
     },
     # Pagination for list endpoints
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",

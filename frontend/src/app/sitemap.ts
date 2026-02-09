@@ -29,12 +29,13 @@ type Tag = {
   slug: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
+import { getApiUrl } from "@/lib/config";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 function apiUrl(path: string) {
-  if (API_BASE) return `${API_BASE}${path}`;
-  return new URL(path, SITE_URL).toString();
+  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+  return getApiUrl(cleanPath);
 }
 
 type PaginatedResponse<T> = {
@@ -55,19 +56,36 @@ function extractResults<T>(data: T[] | PaginatedResponse<T>): T[] {
 }
 
 async function fetchPublishedArticles(): Promise<PublicArticleListItem[]> {
-  try {
-    const res = await fetch(apiUrl(`/v1/articles/?status=published`), {
-      // Sitemap can be cached a bit; regenerate periodically.
-      next: { revalidate: 3600 },
-    });
+  const all: PublicArticleListItem[] = [];
+  let url: string | null = apiUrl(`/v1/articles/?status=published&limit=100`);
 
-    if (!res.ok) return [];
-    const data = (await res.json()) as PublicArticleListItem[] | PaginatedResponse<PublicArticleListItem>;
-    return extractResults(data);
+  try {
+    while (url) {
+      const res = await fetch(url, {
+        // Sitemap can be cached a bit; regenerate periodically.
+        next: { revalidate: 3600 },
+      });
+
+      if (!res.ok) break;
+      const data = (await res.json()) as PublicArticleListItem[] | PaginatedResponse<PublicArticleListItem>;
+
+      if (Array.isArray(data)) {
+        all.push(...data);
+        break; // plain array — no pagination
+      }
+
+      if (data && typeof data === 'object' && 'results' in data) {
+        all.push(...data.results);
+        url = data.next; // follow pagination link
+      } else {
+        break;
+      }
+    }
   } catch {
     // During `next build` the backend may not be reachable (e.g. in CI).
-    return [];
   }
+
+  return all;
 }
 
 async function fetchCategories(): Promise<Category[]> {

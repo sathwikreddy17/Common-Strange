@@ -1,9 +1,8 @@
-import { AuthProvider } from "@/lib/auth";
-
 export default function LoginLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  // AuthProvider is now in the root layout via Providers
+  return <>{children}</>;
 }

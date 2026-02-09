@@ -97,5 +97,42 @@ def guess_content_type(filename: str) -> str:
     return ct or "application/octet-stream"
 
 
+def get_bytes(key: str) -> bytes:
+    """Retrieve raw bytes for a stored object by key.
+
+    Uses S3-compatible storage when MEDIA_USE_S3=1. Otherwise reads from MEDIA_ROOT.
+    """
+    if getattr(settings, "MEDIA_USE_S3", False):
+        bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", "")
+        if not bucket:
+            raise ValueError("AWS_STORAGE_BUCKET_NAME is required when MEDIA_USE_S3=1")
+        client = _s3_client()
+        resp = client.get_object(Bucket=bucket, Key=key)
+        return resp["Body"].read()
+
+    # Local fallback
+    path = (settings.MEDIA_ROOT / key).resolve()
+    return path.read_bytes()
+
+
+def delete_object(key: str) -> None:
+    """Delete a stored object by key.
+
+    Uses S3-compatible storage when MEDIA_USE_S3=1. Otherwise deletes from MEDIA_ROOT.
+    """
+    if getattr(settings, "MEDIA_USE_S3", False):
+        bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", "")
+        if not bucket:
+            raise ValueError("AWS_STORAGE_BUCKET_NAME is required when MEDIA_USE_S3=1")
+        client = _s3_client()
+        client.delete_object(Bucket=bucket, Key=key)
+        return
+
+    # Local fallback
+    path = (settings.MEDIA_ROOT / key).resolve()
+    if path.exists():
+        path.unlink()
+
+
 def key_join(*parts: str) -> str:
     return "/".join(p.strip("/") for p in parts if p and p.strip("/"))

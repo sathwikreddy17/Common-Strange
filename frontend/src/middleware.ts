@@ -24,6 +24,21 @@ const PUBLIC_AUTH_ROUTES = new Set([
 
 function withDiag(res: NextResponse) {
   res.headers.set("x-cs-mw", "1");
+  // Content Security Policy
+  res.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' https://fonts.gstatic.com",
+      "connect-src 'self' " + BACKEND_BASE,
+      "frame-ancestors 'none'",
+    ].join("; ")
+  );
+  res.headers.set("X-Content-Type-Options", "nosniff");
+  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   return res;
 }
 
@@ -52,7 +67,11 @@ export function middleware(req: NextRequest) {
     return withDiag(NextResponse.redirect(new URL("/", BACKEND_BASE), 307));
   }
 
-  return NextResponse.next();
+  // Add security headers to all other responses
+  const res = NextResponse.next();
+  res.headers.set("X-Content-Type-Options", "nosniff");
+  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  return res;
 }
 
 export const config = {

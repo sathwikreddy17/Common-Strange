@@ -43,6 +43,7 @@ class CSRFTokenView(APIView):
 class RegisterView(APIView):
     """User registration endpoint."""
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "auth"
     
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
@@ -59,6 +60,7 @@ class RegisterView(APIView):
 class LoginView(APIView):
     """User login endpoint."""
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "auth"
     
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
@@ -462,6 +464,7 @@ class AdminUserDetailView(APIView):
 class PasswordResetRequestView(APIView):
     """Request a password reset email."""
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "auth"
     
     def post(self, request):
         from .serializers import PasswordResetRequestSerializer
@@ -525,6 +528,7 @@ If you didn't request this, you can safely ignore this email.
 class PasswordResetConfirmView(APIView):
     """Confirm password reset with token."""
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "auth"
     
     def post(self, request):
         from .serializers import PasswordResetConfirmSerializer
@@ -567,6 +571,7 @@ class PasswordResetConfirmView(APIView):
 class PasswordResetValidateView(APIView):
     """Validate a password reset token (check if it's still valid)."""
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "auth"
     
     def get(self, request):
         from .models import PasswordResetToken
@@ -639,6 +644,7 @@ class EmailVerificationView(APIView):
 class ResendVerificationView(APIView):
     """Resend email verification."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = "auth"
     
     def post(self, request):
         from .models import EmailVerificationToken

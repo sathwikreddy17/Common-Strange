@@ -1,11 +1,13 @@
 type Json = unknown;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+// Use the centralized config for API URL resolution
+import { getApiUrl } from "@/lib/config";
 
 function apiUrl(path: string) {
-  if (API_BASE) return `${API_BASE}${path}`;
-  return new URL(path, SITE_URL).toString();
+  // getApiUrl handles server-side (Docker internal) vs client-side (proxy) routing
+  // Strip leading /v1 if present since getApiUrl expects "v1/..."
+  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+  return getApiUrl(cleanPath);
 }
 
 export class ApiError extends Error {

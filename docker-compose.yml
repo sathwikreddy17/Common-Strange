@@ -9,11 +9,21 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U commonstrange"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   minio:
     image: minio/minio
@@ -26,17 +36,26 @@ services:
       - "9001:9001"
     volumes:
       - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
     env_file:
       - ./backend/.env.local
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - redis
-      - minio
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
     volumes:
       - ./backend:/app
 
@@ -46,21 +65,28 @@ services:
     env_file:
       - ./backend/.env.local
     depends_on:
-      - backend
-      - redis
-      - postgres
-      - minio
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
     volumes:
       - ./backend:/app
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     env_file:
       - ./frontend/.env.local
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     volumes:
       - ./frontend:/app
       - /app/node_modules
