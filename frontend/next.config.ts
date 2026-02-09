@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Produce a standalone build for Docker (copies node_modules into .next/standalone)
   output: 'standalone',
+  // Django requires trailing slashes; stop Next.js from 308-redirecting them
+  // away on the /v1/ proxy routes (and everywhere else).
+  skipTrailingSlashRedirect: true,
   images: {
     // Allow images from any domain (for S3, CDN, etc.)
     remotePatterns: [
