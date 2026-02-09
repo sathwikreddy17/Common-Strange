@@ -82,6 +82,10 @@ services:
       dockerfile: Dockerfile.dev
     env_file:
       - ./frontend/.env.local
+    environment:
+      # Override .env.local inside Docker — use internal Docker DNS
+      NEXT_PUBLIC_API_BASE: http://backend:8000
+      NEXT_PUBLIC_BACKEND_BASE: http://backend:8000
     ports:
       - "3000:3000"
     depends_on:

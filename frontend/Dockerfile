@@ -15,7 +15,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # NEXT_PUBLIC_* variables. Real values are injected at runtime.
 ENV NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ENV NEXT_PUBLIC_BACKEND_BASE=http://backend:8000
-ENV NEXT_PUBLIC_API_BASE=
+ENV NEXT_PUBLIC_API_BASE=http://backend:8000
 
 RUN npm run build
 
