@@ -156,6 +156,7 @@ function HeroSection({ article }: { article: PublicArticleListItem }) {
             className="object-cover"
             priority
             sizes="100vw"
+            unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
@@ -252,6 +253,7 @@ function ArticleCard({
             width={600}
             height={featured ? 400 : 340}
             className="h-auto w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            unoptimized
           />
         </Link>
       )}
