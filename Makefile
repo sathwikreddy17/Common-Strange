@@ -4,14 +4,18 @@ dev:
 down:
 	docker compose down
 
-# Local (non-Docker) backend tests using SQLite
-# Requires a local venv with backend requirements installed.
-test-backend-local:
-	cd backend && DJANGO_SETTINGS_MODULE=config.settings_test python manage.py test
+# Backend tests (run inside Docker — requires `docker compose up` first)
+test:
+	docker compose exec backend python manage.py test --settings=config.settings_test --verbosity=2
 
-# Docker-based backend tests (current CI-like path)
-test-backend-docker:
-	docker compose run --rm backend python manage.py test
+# Shorter alias
+test-backend:
+	docker compose exec backend python manage.py test --settings=config.settings_test --verbosity=2
+
+# Run a specific test class or method
+# Usage: make test-one TEST=content.tests.PaginationFormatTests
+test-one:
+	docker compose exec backend python manage.py test --settings=config.settings_test --verbosity=2 $(TEST)
 
 migrate:
 	docker compose exec backend python manage.py migrate

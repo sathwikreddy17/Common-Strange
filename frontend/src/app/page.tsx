@@ -245,16 +245,24 @@ function ArticleCard({
 
   return (
     <article className="group">
-      {heroSrc && (
+      {heroSrc ? (
         <Link href={`/${article.slug}`} className="block overflow-hidden rounded-sm">
-          <Image
-            src={heroSrc}
-            alt={article.hero_image?.alt || article.title}
-            width={600}
-            height={featured ? 400 : 340}
-            className="h-auto w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-            unoptimized
-          />
+          <div className={`relative ${featured ? "aspect-[3/2]" : "aspect-[16/9]"}`}>
+            <Image
+              src={heroSrc}
+              alt={article.hero_image?.alt || article.title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              sizes={featured ? "(max-width: 768px) 100vw, 33vw" : "(max-width: 640px) 100vw, 50vw"}
+              unoptimized
+            />
+          </div>
+        </Link>
+      ) : (
+        <Link href={`/${article.slug}`} className="block overflow-hidden rounded-sm">
+          <div className={`relative ${featured ? "aspect-[3/2]" : "aspect-[16/9]"} bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center`}>
+            <span className="font-serif text-zinc-400 text-lg">No image</span>
+          </div>
         </Link>
       )}
       <div className="mt-4">

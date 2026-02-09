@@ -1,27 +1,37 @@
 """Test settings.
 
-Goal: allow running the backend test suite *locally* without Docker services.
+Goal: allow running the backend test suite against Postgres (required for
+SearchVectorField, pg_trgm, GIN indexes).
 
-- Uses SQLite in-memory DB by default.
-- Disables S3/MinIO requirement.
-- Uses local memory cache.
-- Uses eager Celery (no Redis broker required).
+Works both locally (port-forwarded Docker Postgres) and inside Docker containers.
 
-Run:
+Run inside Docker:
+  docker compose exec backend python manage.py test --settings=config.settings_test
+
+Run locally (requires Docker Postgres on localhost:5432):
   DJANGO_SETTINGS_MODULE=config.settings_test python manage.py test
 """
 
 from __future__ import annotations
 
+import os
+
 from .settings import *  # noqa: F403
 
 # ---
-# Database: SQLite (fast, no external services)
+# Database: Postgres (inherit host/port/credentials from env / parent settings)
 # ---
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB", "commonstrange"),
+        "USER": os.getenv("POSTGRES_USER", "commonstrange"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "commonstrange"),
+        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+        "PORT": int(os.getenv("POSTGRES_PORT", "5432")),
+        "TEST": {
+            "NAME": "commonstrange_test",
+        },
     }
 }
 
@@ -55,3 +65,15 @@ CELERY_TASK_EAGER_PROPAGATES = True
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
+
+# ---
+# Disable throttling in tests so rate limits don't cause spurious failures
+# ---
+REST_FRAMEWORK = {
+    **globals().get("REST_FRAMEWORK", {}),
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": "10000/min",
+        "events": "10000/min",
+        "api": "10000/min",
+    },
+}
