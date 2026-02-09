@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 
 type User = {
   id: number;
@@ -48,6 +49,7 @@ async function getCSRFToken(): Promise<string> {
 
 export default function AccountPage() {
   const router = useRouter();
+  const { logout: authLogout } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([]);
@@ -183,12 +185,7 @@ export default function AccountPage() {
   }
 
   async function handleLogout() {
-    const csrfToken = await getCSRFToken();
-    await fetch("/v1/auth/logout/", {
-      method: "POST",
-      credentials: "include",
-      headers: { "X-CSRFToken": csrfToken },
-    });
+    await authLogout();
     router.push("/");
   }
 

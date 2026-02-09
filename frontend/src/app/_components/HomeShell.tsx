@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useAuth } from "@/lib/auth";
 import { Header, type UserData } from "./Header";
 import { MobileMenu } from "./MobileMenu";
 import { SearchOverlay } from "./SearchOverlay";
@@ -13,24 +14,27 @@ import { SearchOverlay } from "./SearchOverlay";
 export function HomeShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [user, setUser] = useState<UserData | null>(null);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    // Fetch current user client-side (cookie-based auth)
-    fetch("/v1/auth/me/", { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setUser(data?.user ?? null))
-      .catch(() => setUser(null));
-  }, []);
+  // Map AuthProvider's User type to the Header's UserData type
+  const userData: UserData | null = user
+    ? {
+        id: user.id,
+        username: user.username,
+        display_name: user.display_name,
+        role: user.role,
+        is_staff: user.is_staff,
+      }
+    : null;
 
   return (
     <div className="min-h-screen bg-white">
       <Header
         onMenuOpen={() => setMenuOpen(true)}
         onSearchOpen={() => setSearchOpen(true)}
-        user={user}
+        user={userData}
       />
-      <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} user={user} />
+      <MobileMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} user={userData} />
       <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {children}
