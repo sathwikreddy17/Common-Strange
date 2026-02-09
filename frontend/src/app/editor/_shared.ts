@@ -140,3 +140,16 @@ export function formatAuthHint(err: unknown): string {
   }
   return "Request failed.";
 }
+
+/**
+ * Unwrap a DRF paginated response.
+ * If the value is already an array, return it as-is.
+ * If it's a paginated object with { results: [...] }, return `results`.
+ */
+export function unwrapPaginated<T>(data: T[] | { results: T[] }): T[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object" && "results" in data && Array.isArray(data.results)) {
+    return data.results;
+  }
+  return [];
+}

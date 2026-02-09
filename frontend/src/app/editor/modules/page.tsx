@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { apiGet, apiPatch, apiPost, formatAuthHint } from "../_shared";
+import { apiGet, apiPatch, apiPost, formatAuthHint, unwrapPaginated } from "../_shared";
 
 type EditorialArticle = {
   id: number;
@@ -169,23 +169,24 @@ export default function EditorModulesPage() {
       if (placement === "SERIES" && scopeSlug) qs.set("series", scopeSlug);
       if (placement === "AUTHOR" && scopeSlug) qs.set("author", scopeSlug);
 
-      const [ms, as, cs, ss, aus] = await Promise.all([
-        apiGet<CuratedModule[]>(`/v1/editor/modules/?${qs.toString()}`),
-        apiGet<EditorialArticle[]>("/v1/editor/articles/"),
-        apiGet<TaxItem[]>("/v1/categories/"),
-        apiGet<TaxItem[]>("/v1/series/"),
-        apiGet<TaxItem[]>("/v1/authors/"),
+      const [msRaw, asRaw, csRaw, ssRaw, ausRaw] = await Promise.all([
+        apiGet<CuratedModule[] | { results: CuratedModule[] }>(`/v1/editor/modules/?${qs.toString()}`),
+        apiGet<EditorialArticle[] | { results: EditorialArticle[] }>("/v1/editor/articles/"),
+        apiGet<TaxItem[] | { results: TaxItem[] }>("/v1/categories/"),
+        apiGet<TaxItem[] | { results: TaxItem[] }>("/v1/series/"),
+        apiGet<TaxItem[] | { results: TaxItem[] }>("/v1/authors/"),
       ]);
 
-      setModules(Array.isArray(ms) ? ms : []);
-      setArticles(Array.isArray(as) ? as : []);
-      setCategories(Array.isArray(cs) ? cs : []);
-      setSeries(Array.isArray(ss) ? ss : []);
-      setAuthors(Array.isArray(aus) ? aus : []);
+      const msList = unwrapPaginated(msRaw);
+      setModules(msList);
+      setArticles(unwrapPaginated(asRaw));
+      setCategories(unwrapPaginated(csRaw));
+      setSeries(unwrapPaginated(ssRaw));
+      setAuthors(unwrapPaginated(ausRaw));
 
       setSelectedModuleId((prev) => {
-        if (prev && ms.some((m) => m.id === prev)) return prev;
-        return ms.length ? ms[0].id : null;
+        if (prev && msList.some((m) => m.id === prev)) return prev;
+        return msList.length ? msList[0].id : null;
       });
     } catch (e) {
       setError(`Failed to load modules. ${formatAuthHint(e)}`);

@@ -134,7 +134,7 @@ async function fetchCuratedModules(): Promise<CuratedModule[]> {
     const res = await fetch(url, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    return extractResults(data);
   } catch {
     return [];
   }

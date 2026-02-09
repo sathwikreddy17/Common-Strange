@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiDelete, apiGet, apiPost, formatAuthHint } from "../_shared";
+import { apiDelete, apiGet, apiPost, formatAuthHint, unwrapPaginated } from "../_shared";
 
 type FieldSpec = {
   key: string;
@@ -48,8 +48,8 @@ export default function TaxonomyManager(props: Props) {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGet<Item[]>(listPath);
-      setItems(data);
+      const data = await apiGet<Item[] | { results: Item[] }>(listPath);
+      setItems(unwrapPaginated(data));
     } catch (e) {
       setItems([]);
       setError(formatAuthHint(e));
