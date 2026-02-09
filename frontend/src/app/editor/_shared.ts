@@ -4,9 +4,15 @@ type Json = unknown;
 import { getApiUrl } from "@/lib/config";
 
 function apiUrl(path: string) {
-  // getApiUrl handles server-side (Docker internal) vs client-side (proxy) routing
-  // Strip leading /v1 if present since getApiUrl expects "v1/..."
-  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+  // getApiUrl handles server-side (Docker internal) vs client-side (proxy) routing.
+  // It prepends "/v1/" on client-side and "${API_BASE_URL}/v1/" on server-side,
+  // so strip any leading "/v1/" (or "/v1") to avoid double-prefixing.
+  let cleanPath = path.startsWith("/") ? path.slice(1) : path;
+  if (cleanPath.startsWith("v1/")) {
+    cleanPath = cleanPath.slice(3); // strip "v1/"
+  } else if (cleanPath === "v1") {
+    cleanPath = "";
+  }
   return getApiUrl(cleanPath);
 }
 

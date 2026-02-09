@@ -61,13 +61,20 @@ export const isDevelopment = ENV_CONFIG.NODE_ENV === 'development';
 // API URL helper that handles both server-side and client-side requests
 export function getApiUrl(path: string): string {
   // Remove leading slash if present
-  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  let cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  
+  // Normalize: strip "v1/" prefix if present so callers can pass with or without it
+  if (cleanPath.startsWith('v1/')) {
+    cleanPath = cleanPath.slice(3);
+  } else if (cleanPath === 'v1') {
+    cleanPath = '';
+  }
   
   // For server-side requests, use the internal Docker network URL
   if (typeof window === 'undefined') {
-    return `${ENV_CONFIG.API_BASE_URL}/${cleanPath}`;
+    return `${ENV_CONFIG.API_BASE_URL}/v1/${cleanPath}`;
   }
   
-  // For client-side requests, use the proxy or public API URL
+  // For client-side requests, use the Next.js proxy (/v1/[[...path]]/route.ts)
   return `/v1/${cleanPath}`;
 }
