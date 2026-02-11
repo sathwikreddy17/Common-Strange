@@ -698,6 +698,109 @@ class PublicArticlesByIdsView(generics.ListAPIView):
         return qs.order_by(order)
 
 
+class PublicRelatedArticlesView(APIView):
+    """Auto-recommend related articles for a given article.
+
+    Algorithm:
+    1. Same category articles (weighted heavily)
+    2. Articles sharing tags (weighted by overlap count)
+    3. Same series articles
+    4. Exclude the current article
+    5. Limit to 4 results
+
+    Cached for 10 minutes per article.
+    """
+
+    def get(self, request, slug: str):
+        article = get_object_or_404(Article, slug=slug, status=ArticleStatus.PUBLISHED)
+
+        limit = min(int(request.query_params.get("limit", 4)), 10)
+
+        cache_key = f"related:v1:{slug}:limit={limit}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        # Collect candidate IDs with scores
+        scores: dict[int, float] = {}
+
+        # Same category
+        if article.category_id:
+            cat_articles = (
+                Article.objects.filter(
+                    category_id=article.category_id,
+                    status=ArticleStatus.PUBLISHED,
+                )
+                .exclude(id=article.id)
+                .values_list("id", flat=True)[:20]
+            )
+            for aid in cat_articles:
+                scores[aid] = scores.get(aid, 0) + 3.0
+
+        # Same tags (weighted by overlap count)
+        tag_ids = list(article.tags.values_list("id", flat=True))
+        if tag_ids:
+            from django.db.models import Count
+            tag_articles = (
+                Article.objects.filter(
+                    tags__id__in=tag_ids,
+                    status=ArticleStatus.PUBLISHED,
+                )
+                .exclude(id=article.id)
+                .annotate(tag_overlap=Count("tags", filter=models.Q(tags__id__in=tag_ids)))
+                .values_list("id", "tag_overlap")[:30]
+            )
+            for aid, overlap in tag_articles:
+                scores[aid] = scores.get(aid, 0) + (overlap * 2.0)
+
+        # Same series
+        if article.series_id:
+            series_articles = (
+                Article.objects.filter(
+                    series_id=article.series_id,
+                    status=ArticleStatus.PUBLISHED,
+                )
+                .exclude(id=article.id)
+                .values_list("id", flat=True)[:10]
+            )
+            for aid in series_articles:
+                scores[aid] = scores.get(aid, 0) + 2.0
+
+        if not scores:
+            # Fallback: recent articles
+            fallback = (
+                Article.objects.filter(status=ArticleStatus.PUBLISHED)
+                .exclude(id=article.id)
+                .order_by("-published_at")
+                .values_list("id", flat=True)[:limit]
+            )
+            top_ids = list(fallback)
+        else:
+            # Sort by score descending, take top N
+            sorted_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
+            top_ids = sorted_ids[:limit]
+
+        if not top_ids:
+            cache.set(cache_key, [], timeout=600)
+            return Response([])
+
+        # Fetch full article data in score order
+        from .serializers import ArticleListSerializer as ALS
+        qs = (
+            Article.objects.filter(id__in=top_ids, status=ArticleStatus.PUBLISHED)
+            .select_related("category", "series")
+            .prefetch_related("authors", "tags")
+        )
+        articles_by_id = {a.id: a for a in qs}
+        ordered = [articles_by_id[aid] for aid in top_ids if aid in articles_by_id]
+
+        serializer = ALS(ordered, many=True)
+        result = serializer.data
+
+        cache.set(cache_key, result, timeout=600)
+        return Response(result)
+
+
 # --------
 # Editorial (curation)
 # --------

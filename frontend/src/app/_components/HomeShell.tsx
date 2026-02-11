@@ -28,7 +28,7 @@ export function HomeShell({ children }: { children: ReactNode }) {
     : null;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Header
         onMenuOpen={() => setMenuOpen(true)}
         onSearchOpen={() => setSearchOpen(true)}

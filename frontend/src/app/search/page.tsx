@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { getApiUrl } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Search - Common Strange",
@@ -14,6 +15,7 @@ interface SearchResult {
   published_at: string;
   category?: { name: string; slug: string };
   authors: Array<{ name: string; slug: string }>;
+  reading_time_minutes?: number;
 }
 
 interface SearchResponse {
@@ -25,12 +27,14 @@ async function searchArticles(query: string): Promise<SearchResponse> {
   if (!query) return { count: 0, results: [] };
 
   try {
-    const res = await fetch(
-      `http://backend:8000/v1/search/?q=${encodeURIComponent(query)}`,
-      { cache: "no-store" }
-    );
+    const url = getApiUrl(`v1/search/?q=${encodeURIComponent(query)}`);
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return { count: 0, results: [] };
-    return res.json();
+    const data = await res.json();
+    // Handle both paginated and flat responses
+    if (Array.isArray(data)) return { count: data.length, results: data };
+    if (data && typeof data === "object" && "results" in data) return data;
+    return { count: 0, results: [] };
   } catch {
     return { count: 0, results: [] };
   }

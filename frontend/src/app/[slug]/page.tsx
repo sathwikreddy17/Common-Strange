@@ -7,6 +7,9 @@ import ArticleEvents from "@/app/[slug]/ArticleEvents";
 import ShareActions from "./ShareActions";
 import SaveArticleButton from "./SaveArticleButton";
 import EditArticleLink from "./EditArticleLink";
+import ReadingProgressBar from "./ReadingProgressBar";
+import TableOfContents, { type TocItem } from "./TableOfContents";
+import RelatedArticles from "./RelatedArticles";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -190,6 +193,83 @@ async function fetchMediaAssetsByIds(ids: number[]): Promise<Map<number, MediaAs
     }),
   );
   return out;
+}
+
+type RelatedArticleItem = {
+  id: number;
+  title: string;
+  slug: string;
+  dek: string;
+  published_at: string | null;
+  category: { name: string; slug: string } | null;
+  authors: Array<{ name: string; slug: string }>;
+  hero_image?: HeroImage | null;
+  reading_time_minutes?: number;
+};
+
+async function fetchRelatedArticles(slug: string): Promise<RelatedArticleItem[]> {
+  try {
+    const origin = await getOriginForServerFetch();
+    const res = await fetch(apiUrl(`/v1/articles/${encodeURIComponent(slug)}/related/?limit=4`, origin), {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Extract headings from rendered HTML for the table of contents.
+ * Looks for h2 and h3 tags and generates stable IDs.
+ */
+function extractTocFromHtml(html: string): TocItem[] {
+  const items: TocItem[] = [];
+  const regex = /<h([23])[^>]*>([^<]+)<\/h[23]>/gi;
+  let match;
+  const slugCounts = new Map<string, number>();
+
+  while ((match = regex.exec(html)) !== null) {
+    const level = parseInt(match[1], 10);
+    const text = match[2].trim();
+    if (!text) continue;
+
+    // Generate a stable slug-based ID
+    let baseId = text
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 60);
+
+    // Deduplicate
+    const count = slugCounts.get(baseId) || 0;
+    slugCounts.set(baseId, count + 1);
+    const id = count > 0 ? `${baseId}-${count}` : baseId;
+
+    items.push({ id, text, level });
+  }
+
+  return items;
+}
+
+/**
+ * Inject anchor IDs into rendered HTML headings so the ToC links work.
+ */
+function injectHeadingIds(html: string, tocItems: TocItem[]): string {
+  let idx = 0;
+  return html.replace(/<h([23])([^>]*)>/gi, (fullMatch, level, attrs) => {
+    if (idx < tocItems.length) {
+      const item = tocItems[idx];
+      idx++;
+      // Check if id already exists in attrs
+      if (/id=/.test(attrs)) return fullMatch;
+      return `<h${level}${attrs} id="${item.id}">`;
+    }
+    return fullMatch;
+  });
 }
 
 function pickBestMediaUrl(origin: string, m: MediaAsset | undefined): string | null {
@@ -502,16 +582,28 @@ export default async function ArticlePage({
 
   const mediaById = await fetchMediaAssetsByIds([...galleryMediaIds, ...imageMediaIds]);
 
-  const relatedById = await fetchRelatedArticlesByIds(relatedCardWidgets.map((w) => w.articleId));
+  const [relatedById, autoRelatedArticles] = await Promise.all([
+    fetchRelatedArticlesByIds(relatedCardWidgets.map((w) => w.articleId)),
+    fetchRelatedArticles(article.slug),
+  ]);
 
   const relatedCards = relatedCardWidgets
     .map((w) => relatedById.get(w.articleId))
     .filter(Boolean) as PublicArticleListItem[];
 
-  const hasSidebar = relatedCards.length > 0 || (article.tags?.length ?? 0) > 0;
+  // Extract ToC from rendered HTML
+  const tocItems = article.body_html ? extractTocFromHtml(article.body_html) : [];
+  const bodyHtmlWithIds = article.body_html && tocItems.length > 0
+    ? injectHeadingIds(article.body_html, tocItems)
+    : article.body_html;
+
+  const hasSidebar = relatedCards.length > 0 || (article.tags?.length ?? 0) > 0 || tocItems.length >= 2;
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-14">
+      {/* Reading progress bar */}
+      <ReadingProgressBar />
+
       {/* Blueprint: emit pageview/read events */}
       <ArticleEvents slug={article.slug} />
 
@@ -608,7 +700,7 @@ export default async function ArticlePage({
             <section
               className="prose prose-zinc max-w-none lg:prose-lg"
               // body_html is rendered server-side with escaping enabled
-              dangerouslySetInnerHTML={{ __html: article.body_html }}
+              dangerouslySetInnerHTML={{ __html: bodyHtmlWithIds || article.body_html }}
             />
           ) : article.body_md ? (
             <pre className="whitespace-pre-wrap rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm">
@@ -658,10 +750,14 @@ export default async function ArticlePage({
         </article>
 
         {hasSidebar ? (
-          <aside className="space-y-6">
+          <aside className="space-y-6 lg:sticky lg:top-20 lg:h-fit">
+            {tocItems.length >= 2 && (
+              <TableOfContents items={tocItems} />
+            )}
+
             {article.tags && article.tags.length ? (
-              <section className="rounded-2xl border border-zinc-200 bg-white p-5">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Tags</h2>
+              <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Tags</h2>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {article.tags.map((t) => (
                     <Link
@@ -686,6 +782,9 @@ export default async function ArticlePage({
           </aside>
         ) : null}
       </div>
+
+      {/* Auto-recommended related articles */}
+      <RelatedArticles articles={autoRelatedArticles} />
 
       {/* footer meta */}
       {modifiedTime ? <div className="mt-10 text-xs text-zinc-500">Updated {formatDateShort(modifiedTime)}</div> : null}

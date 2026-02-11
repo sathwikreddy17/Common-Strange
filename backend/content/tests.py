@@ -1136,3 +1136,163 @@ class HealthEndpointTests(TestCase):
         client = APIClient()
         res = client.get("/healthz")
         self.assertEqual(res.status_code, 200)
+
+
+# =============================================================================
+# RSS / Atom Feed Tests
+# =============================================================================
+
+
+class RSSFeedTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.cat = Category.objects.create(name="Tech", slug="tech")
+        self.author = Author.objects.create(name="Jane", slug="jane")
+        self.art = Article.objects.create(
+            title="Feed Article",
+            slug="feed-article",
+            dek="A test article for the feed",
+            status=ArticleStatus.PUBLISHED,
+            published_at=timezone.now(),
+            category=self.cat,
+        )
+        self.art.authors.add(self.author)
+
+        self.draft = Article.objects.create(
+            title="Draft Article",
+            slug="draft-feed",
+            status=ArticleStatus.DRAFT,
+        )
+
+    def test_rss_feed_returns_xml(self):
+        res = self.client.get("/v1/feed/rss/")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("xml", res["Content-Type"])
+
+    def test_rss_feed_contains_published_article(self):
+        res = self.client.get("/v1/feed/rss/")
+        content = res.content.decode()
+        self.assertIn("Feed Article", content)
+        self.assertNotIn("Draft Article", content)
+
+    def test_atom_feed_returns_xml(self):
+        res = self.client.get("/v1/feed/atom/")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("xml", res["Content-Type"])
+
+    def test_atom_feed_contains_published_article(self):
+        res = self.client.get("/v1/feed/atom/")
+        content = res.content.decode()
+        self.assertIn("Feed Article", content)
+
+    def test_category_rss_feed(self):
+        res = self.client.get("/v1/categories/tech/feed/rss/")
+        self.assertEqual(res.status_code, 200)
+        content = res.content.decode()
+        self.assertIn("Feed Article", content)
+
+    def test_category_rss_feed_404_for_unknown(self):
+        res = self.client.get("/v1/categories/nonexistent/feed/rss/")
+        self.assertEqual(res.status_code, 404)
+
+
+# =============================================================================
+# Related Articles Tests
+# =============================================================================
+
+
+class RelatedArticlesTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.cat = Category.objects.create(name="Science", slug="science")
+        self.cat2 = Category.objects.create(name="Arts", slug="arts")
+        self.tag1 = Tag.objects.create(name="Physics", slug="physics")
+        self.tag2 = Tag.objects.create(name="Biology", slug="biology")
+        self.series = Series.objects.create(name="Deep Dives", slug="deep-dives")
+
+        # Main article
+        self.main = Article.objects.create(
+            title="Quantum Gravity",
+            slug="quantum-gravity",
+            status=ArticleStatus.PUBLISHED,
+            published_at=timezone.now(),
+            category=self.cat,
+            series=self.series,
+        )
+        self.main.tags.add(self.tag1, self.tag2)
+
+        # Same category + same tag
+        self.related1 = Article.objects.create(
+            title="String Theory",
+            slug="string-theory",
+            status=ArticleStatus.PUBLISHED,
+            published_at=timezone.now(),
+            category=self.cat,
+        )
+        self.related1.tags.add(self.tag1)
+
+        # Same series
+        self.related2 = Article.objects.create(
+            title="Dark Matter",
+            slug="dark-matter",
+            status=ArticleStatus.PUBLISHED,
+            published_at=timezone.now(),
+            series=self.series,
+        )
+
+        # Different category, no shared tags
+        self.unrelated = Article.objects.create(
+            title="Oil Painting",
+            slug="oil-painting",
+            status=ArticleStatus.PUBLISHED,
+            published_at=timezone.now(),
+            category=self.cat2,
+        )
+
+        # Draft (should not appear)
+        self.draft = Article.objects.create(
+            title="Draft Physics",
+            slug="draft-physics",
+            status=ArticleStatus.DRAFT,
+            category=self.cat,
+        )
+        self.draft.tags.add(self.tag1)
+
+    def test_related_articles_returns_list(self):
+        res = self.client.get("/v1/articles/quantum-gravity/related/")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIsInstance(data, list)
+
+    def test_related_articles_includes_same_category(self):
+        res = self.client.get("/v1/articles/quantum-gravity/related/")
+        slugs = {a["slug"] for a in res.json()}
+        self.assertIn("string-theory", slugs)
+
+    def test_related_articles_includes_same_series(self):
+        res = self.client.get("/v1/articles/quantum-gravity/related/")
+        slugs = {a["slug"] for a in res.json()}
+        self.assertIn("dark-matter", slugs)
+
+    def test_related_articles_excludes_self(self):
+        res = self.client.get("/v1/articles/quantum-gravity/related/")
+        slugs = {a["slug"] for a in res.json()}
+        self.assertNotIn("quantum-gravity", slugs)
+
+    def test_related_articles_excludes_drafts(self):
+        res = self.client.get("/v1/articles/quantum-gravity/related/")
+        slugs = {a["slug"] for a in res.json()}
+        self.assertNotIn("draft-physics", slugs)
+
+    def test_related_articles_respects_limit(self):
+        res = self.client.get("/v1/articles/quantum-gravity/related/?limit=1")
+        data = res.json()
+        self.assertLessEqual(len(data), 1)
+
+    def test_related_articles_404_for_nonexistent(self):
+        res = self.client.get("/v1/articles/nonexistent-slug/related/")
+        self.assertEqual(res.status_code, 404)
+
+    def test_related_articles_404_for_draft(self):
+        res = self.client.get("/v1/articles/draft-physics/related/")
+        self.assertEqual(res.status_code, 404)

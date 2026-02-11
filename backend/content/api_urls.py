@@ -2,6 +2,7 @@ from django.urls import include, path
 
 from . import views
 from .events_views import EditorTrendingView, EditorAnalyticsView, EditorPipelineView, PageviewEventView, PublicTrendingView, ReadEventView
+from .feeds import LatestArticlesFeed, LatestArticlesAtomFeed, CategoryArticlesFeed
 from .health_views import HealthView
 from .news_sitemap import google_news_sitemap
 from .og_views import PublicMediaView
@@ -132,6 +133,14 @@ urlpatterns = [
     ),
 
     path("news-sitemap.xml", google_news_sitemap, name="google-news-sitemap"),
+
+    # RSS / Atom feeds
+    path("feed/rss/", LatestArticlesFeed(), name="rss-feed"),
+    path("feed/atom/", LatestArticlesAtomFeed(), name="atom-feed"),
+    path("categories/<slug:slug>/feed/rss/", CategoryArticlesFeed(), name="category-rss-feed"),
+
+    # Related articles (auto-recommendation)
+    path("articles/<slug:slug>/related/", views.PublicRelatedArticlesView.as_view(), name="public-related-articles"),
 ]
 
 # Public media (generated assets)

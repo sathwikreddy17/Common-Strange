@@ -81,6 +81,12 @@ export const metadata: Metadata = {
     ],
   },
   manifest: "/manifest.json",
+  alternates: {
+    types: {
+      "application/rss+xml": "/v1/feed/rss/",
+      "application/atom+xml": "/v1/feed/atom/",
+    },
+  },
 };
 
 export default function RootLayout({
@@ -89,9 +95,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Inline script to prevent flash of wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('cs-theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light'}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-white antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased`}
       >
         <Providers>{children}</Providers>
       </body>

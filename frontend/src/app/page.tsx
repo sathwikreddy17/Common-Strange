@@ -194,29 +194,29 @@ function HeroSection({ article }: { article: PublicArticleListItem }) {
           </div>
         </div>
       ) : (
-        <div className="border-b border-zinc-200 bg-zinc-50 px-6 py-20 md:py-28">
+        <div className="border-b border-zinc-200 bg-zinc-50 px-6 py-20 md:py-28 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="mx-auto max-w-7xl">
             {article.category && (
               <Link
                 href={`/categories/${article.category.slug}`}
-                className="mb-4 inline-block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-900 transition-colors"
+                className="mb-4 inline-block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
               >
                 {article.category.name}
               </Link>
             )}
             <Link href={`/${article.slug}`} className="group block">
-              <h2 className="font-serif text-4xl font-bold text-zinc-900 md:text-5xl lg:text-6xl leading-tight group-hover:text-zinc-600 transition-colors">
+              <h2 className="font-serif text-4xl font-bold text-zinc-900 dark:text-zinc-100 md:text-5xl lg:text-6xl leading-tight group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">
                 {article.title}
               </h2>
             </Link>
             {article.dek && (
-              <p className="mt-4 max-w-2xl text-lg text-zinc-600 leading-relaxed">
+              <p className="mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed">
                 {article.dek}
               </p>
             )}
-            <div className="mt-6 flex items-center gap-4 text-sm text-zinc-500">
+            <div className="mt-6 flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
               {article.authors?.length > 0 && (
-                <span className="font-medium text-zinc-700">
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">
                   {article.authors.map((a) => a.name).join(", ")}
                 </span>
               )}
@@ -314,14 +314,14 @@ function ArticleCard({
 
 function SectionHeader({ title, href }: { title: string; href?: string }) {
   return (
-    <div className="mb-8 flex items-end justify-between border-b border-zinc-200 pb-4">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+    <div className="mb-8 flex items-end justify-between border-b border-zinc-200 dark:border-zinc-700 pb-4">
+      <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
         {title}
       </h2>
       {href && (
         <Link
           href={href}
-          className="text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
         >
           View all →
         </Link>
@@ -421,26 +421,26 @@ function TrendingSidebar({ items }: { items: TrendingItem[] }) {
   if (!items.length) return null;
 
   return (
-    <aside className="rounded-sm border border-zinc-200 bg-white p-6">
-      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+    <aside className="rounded-sm border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+      <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
         Popular This Week
       </h3>
       <ul className="mt-6 space-y-6">
         {items.slice(0, 5).map((item, idx) => (
           <li key={item.id} className="flex gap-4 group">
-            <span className="font-serif text-2xl font-bold text-zinc-200 group-hover:text-zinc-400 transition-colors">
+            <span className="font-serif text-2xl font-bold text-zinc-200 dark:text-zinc-700 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors">
               {String(idx + 1).padStart(2, "0")}
             </span>
             <div className="flex-1 min-w-0">
               <Link
                 href={`/${item.slug}`}
-                className="font-serif font-semibold text-zinc-900 hover:text-zinc-600 transition-colors leading-snug block"
+                className="font-serif font-semibold text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors leading-snug block"
               >
                 {item.title}
               </Link>
-              <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+              <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                 {item.authors && item.authors.length > 0 && (
-                  <span className="font-medium text-zinc-600">
+                  <span className="font-medium text-zinc-600 dark:text-zinc-300">
                     {item.authors[0].name}
                   </span>
                 )}
@@ -457,7 +457,7 @@ function TrendingSidebar({ items }: { items: TrendingItem[] }) {
       </ul>
       <Link
         href="/categories"
-        className="mt-6 block text-center text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+        className="mt-6 block text-center text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
       >
         View all articles →
       </Link>
