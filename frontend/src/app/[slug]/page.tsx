@@ -7,7 +7,6 @@ import ArticleEvents from "@/app/[slug]/ArticleEvents";
 import ShareActions from "./ShareActions";
 import SaveArticleButton from "./SaveArticleButton";
 import EditArticleLink from "./EditArticleLink";
-import ReadingProgressBar from "./ReadingProgressBar";
 import TableOfContents, { type TocItem } from "./TableOfContents";
 import RelatedArticles from "./RelatedArticles";
 import SeriesNavigation, { type SeriesNavData } from "./SeriesNavigation";
@@ -616,9 +615,6 @@ export default async function ArticlePage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-14">
-      {/* Reading progress bar */}
-      <ReadingProgressBar />
-
       {/* Blueprint: emit pageview/read events */}
       <ArticleEvents slug={article.slug} />
 
