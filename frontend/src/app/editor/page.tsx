@@ -113,7 +113,7 @@ export default function EditorHomePage() {
       {/* ---- Quick actions (top row, larger) ---- */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {[
-          { href: "/editor/pipeline", icon: "📋", title: "Pipeline", desc: "Manage the editorial workflow from draft to publication", accent: "border-zinc-900 dark:border-white bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" },
+          { href: "/editor/pipeline", icon: "📋", title: "Pipeline", desc: "Manage the editorial workflow from draft to publication", accent: "border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/50 text-violet-900 dark:text-violet-200" },
           { href: "/editor/articles/new", icon: "✍️", title: "New Article", desc: "Start a new draft and begin writing", accent: "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-200" },
           { href: "/editor/analytics", icon: "📊", title: "Analytics", desc: "See how your content is performing", accent: "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/50 text-blue-900 dark:text-blue-200" },
         ].map((q) => (
