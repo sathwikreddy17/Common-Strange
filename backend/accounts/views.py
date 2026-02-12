@@ -333,12 +333,64 @@ class RecordReadingView(APIView):
 # ============================================
 
 class AdminUserListView(APIView):
-    """List all users (Publisher only)."""
+    """List all users (Publisher only).
+
+    Query params
+    ------------
+    role   – filter by role: reader | writer | editor | publisher | staff
+             "staff" returns writer + editor + publisher (non-reader).
+    search – case-insensitive substring match on username or email.
+    page   – 1-based page number (default 1).
+    page_size – items per page (default 25, max 100).
+
+    Response includes ``total``, ``page``, ``page_size``, ``pages`` alongside
+    the ``users`` list so the frontend can paginate.
+    """
     permission_classes = [permissions.IsAuthenticated, IsPublisher]
-    
+
+    # Group names that count as "staff" (non-reader)
+    STAFF_GROUPS = {"Writer", "Editor", "Publisher"}
+
     def get(self, request):
-        users = User.objects.all().prefetch_related("groups").order_by("-date_joined")
-        return Response({"users": AdminUserListSerializer(users, many=True).data})
+        qs = User.objects.all().prefetch_related("groups").order_by("-date_joined")
+
+        # --- role filter ---
+        role = request.query_params.get("role", "").strip().lower()
+        if role == "staff":
+            qs = qs.filter(groups__name__in=self.STAFF_GROUPS).distinct()
+        elif role in ("writer", "editor", "publisher"):
+            qs = qs.filter(groups__name=role.capitalize())
+        elif role == "reader":
+            qs = qs.exclude(groups__name__in=self.STAFF_GROUPS)
+
+        # --- search ---
+        search = request.query_params.get("search", "").strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(Q(username__icontains=search) | Q(email__icontains=search))
+
+        # --- pagination ---
+        total = qs.count()
+        try:
+            page_size = min(int(request.query_params.get("page_size", 25)), 100)
+        except (ValueError, TypeError):
+            page_size = 25
+        try:
+            page = max(int(request.query_params.get("page", 1)), 1)
+        except (ValueError, TypeError):
+            page = 1
+        pages = max((total + page_size - 1) // page_size, 1)
+        page = min(page, pages)
+        offset = (page - 1) * page_size
+        users = qs[offset : offset + page_size]
+
+        return Response({
+            "users": AdminUserListSerializer(users, many=True).data,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "pages": pages,
+        })
 
 
 class AdminUserCreateView(APIView):
