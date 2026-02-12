@@ -113,7 +113,7 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <div className="mb-10">
-        <Link className="text-sm text-zinc-600 hover:underline" href="/authors">
+        <Link className="text-sm text-zinc-600 hover:underline dark:text-zinc-400" href="/authors">
           ← Back to Authors
         </Link>
       </div>
@@ -121,8 +121,8 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
       <header className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">{author.name}</h1>
-            {author.bio ? <p className="mt-2 max-w-2xl text-zinc-600">{author.bio}</p> : null}
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{author.name}</h1>
+            {author.bio ? <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">{author.bio}</p> : null}
           </div>
 
           <TaxonomyNav />
@@ -132,7 +132,7 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
       <CuratedModules modules={modules} />
 
       {articles.length === 0 ? (
-        <p className="text-zinc-600">No published articles by this author yet.</p>
+        <p className="text-zinc-600 dark:text-zinc-400">No published articles by this author yet.</p>
       ) : (
         <ul className="space-y-4">
           {articles.map((a) => (

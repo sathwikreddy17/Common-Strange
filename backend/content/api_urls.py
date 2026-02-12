@@ -141,6 +141,9 @@ urlpatterns = [
 
     # Related articles (auto-recommendation)
     path("articles/<slug:slug>/related/", views.PublicRelatedArticlesView.as_view(), name="public-related-articles"),
+
+    # Series navigation (prev/next)
+    path("articles/<slug:slug>/series-nav/", views.PublicSeriesNavigationView.as_view(), name="public-series-navigation"),
 ]
 
 # Public media (generated assets)

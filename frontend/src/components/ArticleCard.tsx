@@ -11,8 +11,8 @@ export type ArticleCardItem = {
 
 export default function ArticleCard({ a }: { a: ArticleCardItem }) {
   return (
-    <li className="group rounded-2xl border border-zinc-200 bg-white p-5 transition hover:border-zinc-300">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+    <li className="group rounded-2xl border border-zinc-200 bg-white p-5 transition hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
         {a.category ? (
           <Link className="hover:underline" href={`/categories/${a.category.slug}`}>
             {a.category.name}
@@ -28,13 +28,13 @@ export default function ArticleCard({ a }: { a: ArticleCardItem }) {
         {a.authors?.length ? <span className="truncate">{a.authors.map((x) => x.name).join(", ")}</span> : null}
       </div>
 
-      <h3 className="mt-2 text-lg font-semibold tracking-tight text-zinc-900">
+      <h3 className="mt-2 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
         <Link className="hover:underline" href={`/${a.slug}`}>
           {a.title}
         </Link>
       </h3>
 
-      {a.dek ? <p className="mt-2 text-sm leading-relaxed text-zinc-600">{a.dek}</p> : null}
+      {a.dek ? <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{a.dek}</p> : null}
     </li>
   );
 }

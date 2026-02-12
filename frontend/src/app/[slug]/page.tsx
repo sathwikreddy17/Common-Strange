@@ -10,6 +10,7 @@ import EditArticleLink from "./EditArticleLink";
 import ReadingProgressBar from "./ReadingProgressBar";
 import TableOfContents, { type TocItem } from "./TableOfContents";
 import RelatedArticles from "./RelatedArticles";
+import SeriesNavigation, { type SeriesNavData } from "./SeriesNavigation";
 
 type PullQuoteWidget = {
   type: "pull_quote";
@@ -221,6 +222,19 @@ async function fetchRelatedArticles(slug: string): Promise<RelatedArticleItem[]>
   }
 }
 
+async function fetchSeriesNav(slug: string): Promise<SeriesNavData | null> {
+  try {
+    const origin = await getOriginForServerFetch();
+    const res = await fetch(apiUrl(`/v1/articles/${encodeURIComponent(slug)}/series-nav/`, origin), {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as SeriesNavData;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Extract headings from rendered HTML for the table of contents.
  * Looks for h2 and h3 tags and generates stable IDs.
@@ -283,8 +297,8 @@ function pickBestMediaUrl(origin: string, m: MediaAsset | undefined): string | n
 
 function PullQuote({ widget }: { widget: PullQuoteWidget }) {
   return (
-    <figure className="my-10 rounded-2xl border border-zinc-200 bg-zinc-50 px-6 py-5">
-      <blockquote className="text-lg font-medium leading-relaxed text-zinc-900">“{widget.text}”</blockquote>
+    <figure className="my-10 rounded-2xl border border-zinc-200 bg-zinc-50 px-6 py-5 dark:border-zinc-700 dark:bg-zinc-900">
+      <blockquote className="text-lg font-medium leading-relaxed text-zinc-900 dark:text-zinc-100">“{widget.text}”</blockquote>
       {widget.attribution ? (
         <figcaption className="mt-3 text-sm text-zinc-600">— {widget.attribution}</figcaption>
       ) : null}
@@ -294,8 +308,8 @@ function PullQuote({ widget }: { widget: PullQuoteWidget }) {
 
 function RelatedCard({ related }: { related: PublicArticleListItem }) {
   return (
-    <aside className="rounded-2xl border border-zinc-200 bg-white p-5">
-      <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Related</div>
+    <aside className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Related</div>
       <Link className="mt-3 block" href={`/${related.slug}`}>
         <div className="text-base font-semibold text-zinc-900 hover:underline">{related.title}</div>
         {related.dek ? <div className="mt-1 text-sm text-zinc-600">{related.dek}</div> : null}
@@ -582,9 +596,10 @@ export default async function ArticlePage({
 
   const mediaById = await fetchMediaAssetsByIds([...galleryMediaIds, ...imageMediaIds]);
 
-  const [relatedById, autoRelatedArticles] = await Promise.all([
+  const [relatedById, autoRelatedArticles, seriesNav] = await Promise.all([
     fetchRelatedArticlesByIds(relatedCardWidgets.map((w) => w.articleId)),
     fetchRelatedArticles(article.slug),
+    fetchSeriesNav(article.slug),
   ]);
 
   const relatedCards = relatedCardWidgets
@@ -611,7 +626,7 @@ export default async function ArticlePage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <div className="mb-10 flex items-center justify-between gap-4">
-        <Link className="text-sm text-zinc-600 hover:underline" href="/">
+        <Link className="text-sm text-zinc-600 hover:underline dark:text-zinc-400" href="/">
           ← Back
         </Link>
 
@@ -620,7 +635,7 @@ export default async function ArticlePage({
           <SaveArticleButton articleId={article.id} articleSlug={article.slug} />
           <ShareActions title={shareTitle} url={shareUrl} />
           <a
-            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(
               shareUrl,
             )}`}
@@ -630,7 +645,7 @@ export default async function ArticlePage({
             Share
           </a>
           <a
-            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+            className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             href={`mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareUrl)}`}
           >
             Email
@@ -645,7 +660,7 @@ export default async function ArticlePage({
               {article.series ? (
                 <Link
                   href={`/series/${article.series.slug}`}
-                  className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                  className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                 >
                   Series: {article.series.name}
                 </Link>
@@ -654,17 +669,17 @@ export default async function ArticlePage({
               {article.category ? (
                 <Link
                   href={`/categories/${article.category.slug}`}
-                  className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                  className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                 >
                   {article.category.name}
                 </Link>
               ) : null}
             </div>
 
-            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 md:text-5xl">{article.title}</h1>
-            {article.dek ? <p className="mt-4 text-lg leading-relaxed text-zinc-700">{article.dek}</p> : null}
+            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 md:text-5xl">{article.title}</h1>
+            {article.dek ? <p className="mt-4 text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">{article.dek}</p> : null}
 
-            <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500">
+            <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500 dark:text-zinc-400">
               {article.authors.length ? <span>{article.authors.map((x) => x.name).join(", ")}</span> : null}
               {publishedTime ? (
                 <>
@@ -703,11 +718,11 @@ export default async function ArticlePage({
               dangerouslySetInnerHTML={{ __html: bodyHtmlWithIds || article.body_html }}
             />
           ) : article.body_md ? (
-            <pre className="whitespace-pre-wrap rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm">
+            <pre className="whitespace-pre-wrap rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
               {article.body_md}
             </pre>
           ) : (
-            <p className="text-zinc-600">(No body yet)</p>
+            <p className="text-zinc-600 dark:text-zinc-400">(No body yet)</p>
           )}
 
           {widgets.length ? (
@@ -763,7 +778,7 @@ export default async function ArticlePage({
                     <Link
                       key={t.slug}
                       href={`/tags/${t.slug}`}
-                      className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50"
+                      className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                     >
                       #{t.name}
                     </Link>
@@ -783,11 +798,16 @@ export default async function ArticlePage({
         ) : null}
       </div>
 
+      {/* Series prev/next navigation */}
+      {seriesNav && seriesNav.series && (
+        <SeriesNavigation data={seriesNav} />
+      )}
+
       {/* Auto-recommended related articles */}
       <RelatedArticles articles={autoRelatedArticles} />
 
       {/* footer meta */}
-      {modifiedTime ? <div className="mt-10 text-xs text-zinc-500">Updated {formatDateShort(modifiedTime)}</div> : null}
+      {modifiedTime ? <div className="mt-10 text-xs text-zinc-500 dark:text-zinc-400">Updated {formatDateShort(modifiedTime)}</div> : null}
     </main>
   );
 }

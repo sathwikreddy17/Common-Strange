@@ -25,11 +25,11 @@ export default async function CategoriesIndexPage() {
       <header className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Categories</h1>
-            <p className="mt-2 text-zinc-600">Browse the site by section.</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Categories</h1>
+            <p className="mt-2 text-zinc-600 dark:text-zinc-400">Browse the site by section.</p>
           </div>
 
-          <nav className="text-sm text-zinc-600">
+          <nav className="text-sm text-zinc-600 dark:text-zinc-400">
             <Link className="hover:underline" href="/tags">
               Tags
             </Link>
@@ -46,15 +46,15 @@ export default async function CategoriesIndexPage() {
       </header>
 
       {categories.length === 0 ? (
-        <p className="text-zinc-600">No categories yet.</p>
+        <p className="text-zinc-600 dark:text-zinc-400">No categories yet.</p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((c) => (
-            <li key={c.slug} className="rounded-2xl border border-zinc-200 bg-white p-6">
-              <Link className="text-lg font-semibold text-zinc-900 hover:underline" href={`/categories/${c.slug}`}>
+            <li key={c.slug} className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+              <Link className="text-lg font-semibold text-zinc-900 hover:underline dark:text-zinc-100" href={`/categories/${c.slug}`}>
                 {c.name}
               </Link>
-              {c.description ? <p className="mt-2 text-sm leading-relaxed text-zinc-600">{c.description}</p> : null}
+              {c.description ? <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{c.description}</p> : null}
             </li>
           ))}
         </ul>

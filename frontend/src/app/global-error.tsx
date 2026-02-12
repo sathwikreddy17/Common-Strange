@@ -11,7 +11,7 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
+      <body className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 dark:bg-zinc-950">
         <div className="max-w-md w-full text-center">
           {/* Critical Error Icon */}
           <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
@@ -30,17 +30,17 @@ export default function GlobalError({
             </svg>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 dark:text-zinc-100">
             Critical Error
           </h1>
-          <p className="text-gray-600 mb-8">
+          <p className="text-gray-600 mb-8 dark:text-zinc-400">
             A critical error occurred. Our team has been notified.
           </p>
 
           {/* Error Details (development only) */}
           {process.env.NODE_ENV === "development" && error.message && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
-              <p className="text-sm font-mono text-red-800 break-all">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-left dark:bg-red-900/30 dark:border-red-800">
+              <p className="text-sm font-mono text-red-800 break-all dark:text-red-400">
                 {error.message}
               </p>
             </div>
@@ -55,7 +55,7 @@ export default function GlobalError({
             </button>
             <Link
               href="/"
-              className="px-6 py-3 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-6 py-3 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600"
             >
               Go Home
             </Link>

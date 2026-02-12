@@ -25,11 +25,11 @@ export default async function SeriesIndexPage() {
       <header className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Series</h1>
-            <p className="mt-2 text-zinc-600">Follow a thread of stories over time.</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Series</h1>
+            <p className="mt-2 text-zinc-600 dark:text-zinc-400">Follow a thread of stories over time.</p>
           </div>
 
-          <nav className="text-sm text-zinc-600">
+          <nav className="text-sm text-zinc-600 dark:text-zinc-400">
             <Link className="hover:underline" href="/categories">
               Categories
             </Link>
@@ -46,15 +46,15 @@ export default async function SeriesIndexPage() {
       </header>
 
       {series.length === 0 ? (
-        <p className="text-zinc-600">No series yet.</p>
+        <p className="text-zinc-600 dark:text-zinc-400">No series yet.</p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {series.map((s) => (
-            <li key={s.slug} className="rounded-2xl border border-zinc-200 bg-white p-6">
-              <Link className="text-lg font-semibold text-zinc-900 hover:underline" href={`/series/${s.slug}`}>
+            <li key={s.slug} className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+              <Link className="text-lg font-semibold text-zinc-900 hover:underline dark:text-zinc-100" href={`/series/${s.slug}`}>
                 {s.name}
               </Link>
-              {s.description ? <p className="mt-2 text-sm leading-relaxed text-zinc-600">{s.description}</p> : null}
+              {s.description ? <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{s.description}</p> : null}
             </li>
           ))}
         </ul>

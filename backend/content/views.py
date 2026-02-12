@@ -801,6 +801,65 @@ class PublicRelatedArticlesView(APIView):
         return Response(result)
 
 
+class PublicSeriesNavigationView(APIView):
+    """Return prev/next articles in the same series for an article.
+
+    Used on the article page to show series navigation links.
+    Articles in a series are ordered by published_at ascending (chronological).
+    """
+
+    def get(self, request, slug: str):
+        article = get_object_or_404(Article, slug=slug, status=ArticleStatus.PUBLISHED)
+
+        if not article.series_id:
+            return Response({"series": None, "previous": None, "next": None})
+
+        cache_key = f"series_nav:v1:{slug}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        series_articles = list(
+            Article.objects.filter(
+                series_id=article.series_id,
+                status=ArticleStatus.PUBLISHED,
+            )
+            .order_by("published_at", "id")
+            .values_list("id", "title", "slug")
+        )
+
+        current_idx = None
+        for idx, (aid, _, _) in enumerate(series_articles):
+            if aid == article.id:
+                current_idx = idx
+                break
+
+        prev_article = None
+        next_article = None
+
+        if current_idx is not None:
+            if current_idx > 0:
+                _, prev_title, prev_slug = series_articles[current_idx - 1]
+                prev_article = {"title": prev_title, "slug": prev_slug}
+            if current_idx < len(series_articles) - 1:
+                _, next_title, next_slug = series_articles[current_idx + 1]
+                next_article = {"title": next_title, "slug": next_slug}
+
+        result = {
+            "series": {
+                "name": article.series.name,
+                "slug": article.series.slug,
+            },
+            "current_position": (current_idx or 0) + 1,
+            "total_in_series": len(series_articles),
+            "previous": prev_article,
+            "next": next_article,
+        }
+
+        cache.set(cache_key, result, timeout=600)
+        return Response(result)
+
+
 # --------
 # Editorial (curation)
 # --------

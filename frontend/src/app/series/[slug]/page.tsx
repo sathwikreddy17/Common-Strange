@@ -113,7 +113,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <div className="mb-10">
-        <Link className="text-sm text-zinc-600 hover:underline" href="/series">
+        <Link className="text-sm text-zinc-600 hover:underline dark:text-zinc-400" href="/series">
           ← Back to Series
         </Link>
       </div>
@@ -121,8 +121,8 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
       <header className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">{series.name}</h1>
-            {series.description ? <p className="mt-2 max-w-2xl text-zinc-600">{series.description}</p> : null}
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{series.name}</h1>
+            {series.description ? <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">{series.description}</p> : null}
           </div>
 
           <TaxonomyNav />
@@ -132,7 +132,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
       <CuratedModules modules={modules} />
 
       {articles.length === 0 ? (
-        <p className="text-zinc-600">No published articles in this series yet.</p>
+        <p className="text-zinc-600 dark:text-zinc-400">No published articles in this series yet.</p>
       ) : (
         <ul className="space-y-4">
           {articles.map((a) => (

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function TaxonomyNav() {
   return (
-    <nav className="text-sm text-zinc-600">
+    <nav className="text-sm text-zinc-600 dark:text-zinc-400">
       <Link className="hover:underline" href="/categories">
         Categories
       </Link>

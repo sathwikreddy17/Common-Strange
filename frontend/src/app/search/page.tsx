@@ -50,18 +50,18 @@ export default async function SearchPage({
   const results = await searchArticles(query);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-gray-200 dark:bg-zinc-900 dark:border-zinc-800">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <Link href="/" className="text-2xl font-serif font-bold text-gray-900">
+          <Link href="/" className="text-2xl font-serif font-bold text-gray-900 dark:text-zinc-100">
             Common Strange
           </Link>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Search</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-6">Search</h1>
 
         {/* Search Form */}
         <form action="/search" method="GET" className="mb-8">
@@ -71,12 +71,12 @@ export default async function SearchPage({
               name="q"
               defaultValue={query}
               placeholder="Search articles..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+              className="flex-1 px-4 py-3 border border-gray-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
               autoFocus
             />
             <button
               type="submit"
-              className="px-6 py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+              className="px-6 py-3 bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium rounded-lg hover:bg-gray-800 dark:hover:bg-zinc-200 transition-colors"
             >
               Search
             </button>
@@ -86,7 +86,7 @@ export default async function SearchPage({
         {/* Results */}
         {query && (
           <div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-zinc-400 mb-6">
               {results.count} result{results.count !== 1 ? "s" : ""} for &quot;{query}&quot;
             </p>
 
@@ -95,12 +95,12 @@ export default async function SearchPage({
                 {results.results.map((article) => (
                   <article
                     key={article.id}
-                    className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                    className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-700 p-6 hover:shadow-md dark:hover:border-zinc-600 transition-shadow"
                   >
                     {article.category && (
                       <Link
                         href={`/categories/${article.category.slug}`}
-                        className="text-sm font-medium text-blue-600 hover:underline"
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         {article.category.name}
                       </Link>
@@ -108,15 +108,15 @@ export default async function SearchPage({
                     <h2 className="mt-2">
                       <Link
                         href={`/${article.slug}`}
-                        className="text-xl font-bold text-gray-900 hover:text-blue-600"
+                        className="text-xl font-bold text-gray-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         {article.title}
                       </Link>
                     </h2>
                     {article.dek && (
-                      <p className="mt-2 text-gray-600 line-clamp-2">{article.dek}</p>
+                      <p className="mt-2 text-gray-600 dark:text-zinc-400 line-clamp-2">{article.dek}</p>
                     )}
-                    <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
+                    <div className="mt-3 flex items-center gap-4 text-sm text-gray-500 dark:text-zinc-500">
                       {article.authors.length > 0 && (
                         <span>
                           By{" "}
@@ -148,10 +148,10 @@ export default async function SearchPage({
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-gray-600 mb-4">No articles found matching your search.</p>
-                <p className="text-sm text-gray-500">
+                <p className="text-gray-600 dark:text-zinc-400 mb-4">No articles found matching your search.</p>
+                <p className="text-sm text-gray-500 dark:text-zinc-500">
                   Try different keywords or{" "}
-                  <Link href="/categories" className="text-blue-600 hover:underline">
+                  <Link href="/categories" className="text-blue-600 dark:text-blue-400 hover:underline">
                     browse categories
                   </Link>
                 </p>
@@ -161,7 +161,7 @@ export default async function SearchPage({
         )}
 
         {!query && (
-          <div className="text-center py-12 text-gray-600">
+          <div className="text-center py-12 text-gray-600 dark:text-zinc-400">
             Enter a search term above to find articles.
           </div>
         )}

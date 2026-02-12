@@ -24,11 +24,15 @@ export default async function TagsIndexPage() {
       <header className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Tags</h1>
-            <p className="mt-2 text-zinc-600">Browse topics across the site.</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+              Tags
+            </h1>
+            <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+              Browse topics across the site.
+            </p>
           </div>
 
-          <nav className="text-sm text-zinc-600">
+          <nav className="text-sm text-zinc-600 dark:text-zinc-400">
             <Link className="hover:underline" href="/categories">
               Categories
             </Link>
@@ -45,13 +49,13 @@ export default async function TagsIndexPage() {
       </header>
 
       {tags.length === 0 ? (
-        <p className="text-zinc-600">No tags yet.</p>
+        <p className="text-zinc-600 dark:text-zinc-400">No tags yet.</p>
       ) : (
         <ul className="flex flex-wrap gap-2">
           {tags.map((t) => (
             <li key={t.slug}>
               <Link
-                className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50"
+                className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 href={`/tags/${t.slug}`}
               >
                 #{t.name}

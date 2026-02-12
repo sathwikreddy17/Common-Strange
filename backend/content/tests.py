@@ -1296,3 +1296,116 @@ class RelatedArticlesTests(TestCase):
     def test_related_articles_404_for_draft(self):
         res = self.client.get("/v1/articles/draft-physics/related/")
         self.assertEqual(res.status_code, 404)
+
+
+class SeriesNavigationTests(TestCase):
+    """Tests for the /v1/articles/<slug>/series-nav/ endpoint."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.series = Series.objects.create(
+            name="Quantum Series", slug="quantum-series", description=""
+        )
+        self.cat = Category.objects.create(name="Physics", slug="physics")
+        now = timezone.now()
+
+        self.art1 = Article.objects.create(
+            title="Part One",
+            slug="part-one",
+            status=ArticleStatus.PUBLISHED,
+            series=self.series,
+            category=self.cat,
+            publish_at=now - timezone.timedelta(days=3),
+            published_at=now - timezone.timedelta(days=3),
+        )
+        self.art2 = Article.objects.create(
+            title="Part Two",
+            slug="part-two",
+            status=ArticleStatus.PUBLISHED,
+            series=self.series,
+            category=self.cat,
+            publish_at=now - timezone.timedelta(days=2),
+            published_at=now - timezone.timedelta(days=2),
+        )
+        self.art3 = Article.objects.create(
+            title="Part Three",
+            slug="part-three",
+            status=ArticleStatus.PUBLISHED,
+            series=self.series,
+            category=self.cat,
+            publish_at=now - timezone.timedelta(days=1),
+            published_at=now - timezone.timedelta(days=1),
+        )
+        self.art_draft = Article.objects.create(
+            title="Draft Part",
+            slug="draft-part",
+            status=ArticleStatus.DRAFT,
+            series=self.series,
+            category=self.cat,
+        )
+        self.art_no_series = Article.objects.create(
+            title="Standalone",
+            slug="standalone",
+            status=ArticleStatus.PUBLISHED,
+            category=self.cat,
+            publish_at=now,
+            published_at=now,
+        )
+
+    def test_series_nav_returns_200(self):
+        res = self.client.get("/v1/articles/part-two/series-nav/")
+        self.assertEqual(res.status_code, 200)
+
+    def test_series_nav_contains_series_info(self):
+        res = self.client.get("/v1/articles/part-two/series-nav/")
+        data = res.json()
+        self.assertEqual(data["series"]["name"], "Quantum Series")
+        self.assertEqual(data["series"]["slug"], "quantum-series")
+
+    def test_series_nav_middle_has_prev_and_next(self):
+        res = self.client.get("/v1/articles/part-two/series-nav/")
+        data = res.json()
+        self.assertIsNotNone(data["previous"])
+        self.assertIsNotNone(data["next"])
+        self.assertEqual(data["previous"]["slug"], "part-one")
+        self.assertEqual(data["next"]["slug"], "part-three")
+
+    def test_series_nav_first_has_no_prev(self):
+        res = self.client.get("/v1/articles/part-one/series-nav/")
+        data = res.json()
+        self.assertIsNone(data["previous"])
+        self.assertIsNotNone(data["next"])
+        self.assertEqual(data["next"]["slug"], "part-two")
+
+    def test_series_nav_last_has_no_next(self):
+        res = self.client.get("/v1/articles/part-three/series-nav/")
+        data = res.json()
+        self.assertIsNotNone(data["previous"])
+        self.assertIsNone(data["next"])
+        self.assertEqual(data["previous"]["slug"], "part-two")
+
+    def test_series_nav_position_and_total(self):
+        res = self.client.get("/v1/articles/part-two/series-nav/")
+        data = res.json()
+        self.assertEqual(data["current_position"], 2)
+        self.assertEqual(data["total_in_series"], 3)
+
+    def test_series_nav_excludes_drafts_from_count(self):
+        res = self.client.get("/v1/articles/part-three/series-nav/")
+        data = res.json()
+        self.assertEqual(data["total_in_series"], 3)
+
+    def test_series_nav_no_series_returns_null(self):
+        res = self.client.get("/v1/articles/standalone/series-nav/")
+        data = res.json()
+        self.assertIsNone(data["series"])
+        self.assertIsNone(data["previous"])
+        self.assertIsNone(data["next"])
+
+    def test_series_nav_404_for_draft(self):
+        res = self.client.get("/v1/articles/draft-part/series-nav/")
+        self.assertEqual(res.status_code, 404)
+
+    def test_series_nav_404_for_nonexistent(self):
+        res = self.client.get("/v1/articles/nonexistent/series-nav/")
+        self.assertEqual(res.status_code, 404)

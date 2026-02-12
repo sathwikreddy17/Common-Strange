@@ -44,21 +44,21 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center dark:bg-zinc-950 py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link href="/" className="flex justify-center text-2xl font-bold text-gray-900">
+        <Link href="/" className="flex justify-center text-2xl font-bold text-gray-900 dark:text-zinc-100">
           Common Strange
         </Link>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-zinc-100">
           Reset your password
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-center text-sm text-gray-600 dark:text-zinc-400">
           Enter your email and we&apos;ll send you a link to reset your password.
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 dark:bg-zinc-900 dark:shadow-zinc-900/50">
           {status === "success" ? (
             <div className="text-center">
               <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
@@ -66,8 +66,8 @@ export default function ForgotPasswordPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Check your email</h3>
-              <p className="text-sm text-gray-600 mb-6">{message}</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2 dark:text-zinc-100">Check your email</h3>
+              <p className="text-sm text-gray-600 mb-6 dark:text-zinc-400">{message}</p>
               <Link
                 href="/login"
                 className="text-blue-600 hover:text-blue-500 font-medium"
@@ -78,13 +78,13 @@ export default function ForgotPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {status === "error" && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm dark:bg-red-900/30 dark:border-red-800 dark:text-red-400">
                   {message}
                 </div>
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
                   Email address
                 </label>
                 <input
@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
                   placeholder="you@example.com"
                 />
               </div>
@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
               </button>
 
               <div className="text-center text-sm">
-                <Link href="/login" className="text-blue-600 hover:text-blue-500">
+                <Link href="/login" className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
                   Back to login
                 </Link>
               </div>

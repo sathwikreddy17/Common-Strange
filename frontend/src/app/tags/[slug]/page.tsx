@@ -80,7 +80,7 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
   return (
     <main className="mx-auto max-w-6xl px-6 py-14">
       <div className="mb-10">
-        <Link className="text-sm text-zinc-600 hover:underline" href="/tags">
+        <Link className="text-sm text-zinc-600 hover:underline dark:text-zinc-400" href="/tags">
           ← Back to Tags
         </Link>
       </div>
@@ -88,8 +88,8 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
       <header className="mb-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">#{tag.name}</h1>
-            <p className="mt-2 text-zinc-600">All published articles tagged {tag.name}.</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">#{tag.name}</h1>
+            <p className="mt-2 text-zinc-600 dark:text-zinc-400">All published articles tagged {tag.name}.</p>
           </div>
 
           <TaxonomyNav />
@@ -97,7 +97,7 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
       </header>
 
       {articles.length === 0 ? (
-        <p className="text-zinc-600">No published articles with this tag yet.</p>
+        <p className="text-zinc-600 dark:text-zinc-400">No published articles with this tag yet.</p>
       ) : (
         <ul className="space-y-4">
           {articles.map((a) => (
