@@ -27,12 +27,12 @@ export function MobileMenu({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Menu Panel */}
-      <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
-          <span className="font-serif text-xl font-bold text-zinc-900">Menu</span>
+      <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-zinc-900 shadow-xl">
+        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-700 px-6 py-4">
+          <span className="font-serif text-xl font-bold text-zinc-900 dark:text-zinc-100">Menu</span>
           <button
             onClick={onClose}
-            className="p-2 text-zinc-500 hover:text-zinc-900"
+            className="p-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             aria-label="Close menu"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -48,11 +48,11 @@ export function MobileMenu({
 
         <nav className="px-6 py-8">
           {isStaff && (
-            <div className="mb-6 pb-6 border-b border-zinc-200">
+            <div className="mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-700">
               <Link
                 href="/editor"
                 onClick={onClose}
-                className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-3 text-sm font-medium text-white hover:bg-zinc-800"
+                className="flex items-center gap-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 px-4 py-3 text-sm font-medium text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200"
               >
                 ✏️ Write / Editor Dashboard
               </Link>
@@ -64,7 +64,7 @@ export function MobileMenu({
               <Link
                 href="/categories"
                 onClick={onClose}
-                className="text-lg font-medium text-zinc-900 hover:text-zinc-600"
+                className="text-lg font-medium text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300"
               >
                 Categories
               </Link>
@@ -73,7 +73,7 @@ export function MobileMenu({
               <Link
                 href="/series"
                 onClick={onClose}
-                className="text-lg font-medium text-zinc-900 hover:text-zinc-600"
+                className="text-lg font-medium text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300"
               >
                 Series
               </Link>
@@ -82,7 +82,7 @@ export function MobileMenu({
               <Link
                 href="/authors"
                 onClick={onClose}
-                className="text-lg font-medium text-zinc-900 hover:text-zinc-600"
+                className="text-lg font-medium text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300"
               >
                 Authors
               </Link>
@@ -91,21 +91,21 @@ export function MobileMenu({
               <Link
                 href="/tags"
                 onClick={onClose}
-                className="text-lg font-medium text-zinc-900 hover:text-zinc-600"
+                className="text-lg font-medium text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300"
               >
                 Tags
               </Link>
             </li>
           </ul>
 
-          <div className="mt-8 pt-6 border-t border-zinc-200">
+          <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-700">
             {user ? (
               <Link
                 href="/account"
                 onClick={onClose}
-                className="flex items-center gap-3 text-zinc-700 hover:text-zinc-900"
+                className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
               >
-                <span className="w-8 h-8 rounded-full bg-zinc-200 flex items-center justify-center text-sm font-medium">
+                <span className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-sm font-medium dark:text-zinc-200">
                   {user.display_name?.charAt(0).toUpperCase() ||
                     user.username.charAt(0).toUpperCase()}
                 </span>
@@ -115,16 +115,16 @@ export function MobileMenu({
               <Link
                 href="/login"
                 onClick={onClose}
-                className="text-lg font-medium text-zinc-900 hover:text-zinc-600"
+                className="text-lg font-medium text-zinc-900 dark:text-zinc-100 hover:text-zinc-600 dark:hover:text-zinc-300"
               >
                 Sign in
               </Link>
             )}
           </div>
 
-          <div className="mt-8 border-t border-zinc-200 pt-8">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">About</p>
-            <p className="mt-4 text-sm leading-relaxed text-zinc-600">
+          <div className="mt-8 border-t border-zinc-200 dark:border-zinc-700 pt-8">
+            <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">About</p>
+            <p className="mt-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
               Common Strange explores ideas that expand your perspective. Long-form essays,
               thoughtful analysis, and stories that matter.
             </p>

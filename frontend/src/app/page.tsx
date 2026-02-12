@@ -260,8 +260,8 @@ function ArticleCard({
         </Link>
       ) : (
         <Link href={`/${article.slug}`} className="block overflow-hidden rounded-sm">
-          <div className={`relative ${featured ? "aspect-[3/2]" : "aspect-[16/9]"} bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center`}>
-            <span className="font-serif text-zinc-400 text-lg">No image</span>
+          <div className={`relative ${featured ? "aspect-[3/2]" : "aspect-[16/9]"} bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center`}>
+            <span className="font-serif text-zinc-400 dark:text-zinc-500 text-lg">No image</span>
           </div>
         </Link>
       )}
@@ -269,14 +269,14 @@ function ArticleCard({
         {article.category && (
           <Link
             href={`/categories/${article.category.slug}`}
-            className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500 hover:text-zinc-900 transition-colors"
+            className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
           >
             {article.category.name}
           </Link>
         )}
         <Link href={`/${article.slug}`} className="mt-2 block">
           <h3
-            className={`font-serif font-bold text-zinc-900 group-hover:text-zinc-600 transition-colors leading-snug ${
+            className={`font-serif font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors leading-snug ${
               featured ? "text-2xl" : "text-xl"
             }`}
           >
@@ -284,13 +284,13 @@ function ArticleCard({
           </h3>
         </Link>
         {article.dek && (
-          <p className="mt-2 text-sm text-zinc-600 line-clamp-2 leading-relaxed">
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
             {article.dek}
           </p>
         )}
-        <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
+        <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
           {article.authors?.length > 0 && (
-            <span className="font-medium text-zinc-600">
+            <span className="font-medium text-zinc-600 dark:text-zinc-300">
               {article.authors.map((a) => a.name).join(", ")}
             </span>
           )}
@@ -343,7 +343,7 @@ function CuratedModulesSection({ modules }: { modules: CuratedModule[] }) {
         <div key={mod.id} className="mb-12 last:mb-0">
           <SectionHeader title={mod.title || "Featured Collection"} />
           {mod.subtitle && (
-            <p className="mb-6 text-sm text-zinc-600">{mod.subtitle}</p>
+            <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">{mod.subtitle}</p>
           )}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {mod.items
@@ -394,18 +394,18 @@ function CuratedModulesSection({ modules }: { modules: CuratedModule[] }) {
                   <Link
                     key={item.id}
                     href={href}
-                    className="group block rounded-sm border border-zinc-200 p-5 hover:border-zinc-400 hover:shadow-sm transition-all"
+                    className="group block rounded-sm border border-zinc-200 dark:border-zinc-700 p-5 hover:border-zinc-400 dark:hover:border-zinc-500 hover:shadow-sm transition-all"
                   >
                     {typeLabel && (
-                      <span className="mb-2 inline-block rounded bg-zinc-100 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      <span className="mb-2 inline-block rounded bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                         {typeLabel}
                       </span>
                     )}
-                    <h3 className="font-serif text-lg font-bold text-zinc-900 group-hover:text-zinc-600 transition-colors leading-snug">
+                    <h3 className="font-serif text-lg font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors leading-snug">
                       {title}
                     </h3>
                     {dek && (
-                      <p className="mt-2 text-sm text-zinc-600 line-clamp-2">{dek}</p>
+                      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">{dek}</p>
                     )}
                   </Link>
                 );
@@ -479,8 +479,8 @@ export default async function Home() {
       <HomeShell>
         <main className="flex min-h-[50vh] items-center justify-center">
           <div className="text-center">
-            <h2 className="font-serif text-2xl font-bold text-zinc-900">No articles yet</h2>
-            <p className="mt-2 text-zinc-600">Check back soon for new content.</p>
+            <h2 className="font-serif text-2xl font-bold text-zinc-900 dark:text-zinc-100">No articles yet</h2>
+            <p className="mt-2 text-zinc-600 dark:text-zinc-400">Check back soon for new content.</p>
           </div>
         </main>
         <Footer />
@@ -533,7 +533,7 @@ export default async function Home() {
               <div className="mt-10 text-center">
                 <Link
                   href="/categories"
-                  className="inline-block rounded-sm border border-zinc-300 px-8 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 hover:border-zinc-400 transition-colors"
+                  className="inline-block rounded-sm border border-zinc-300 dark:border-zinc-600 px-8 py-3 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors"
                 >
                   Browse all articles
                 </Link>

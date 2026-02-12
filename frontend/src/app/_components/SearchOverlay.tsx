@@ -44,7 +44,7 @@ export function SearchOverlay({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-white/98 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] bg-white/98 dark:bg-zinc-950/98 backdrop-blur-sm">
       <div className="mx-auto max-w-2xl px-6 pt-20">
         <div className="flex justify-end mb-6">
           <button
@@ -53,7 +53,7 @@ export function SearchOverlay({
               setQuery("");
               setResults([]);
             }}
-            className="p-2 text-zinc-500 hover:text-zinc-900"
+            className="p-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             aria-label="Close search"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -73,13 +73,13 @@ export function SearchOverlay({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search articles..."
-            className="w-full border-b-2 border-zinc-300 bg-transparent pb-4 font-serif text-3xl text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-900 transition-colors"
+            className="w-full border-b-2 border-zinc-300 dark:border-zinc-600 bg-transparent pb-4 font-serif text-3xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-zinc-900 dark:focus:border-zinc-400 transition-colors"
             autoFocus
           />
         </form>
 
         {loading && (
-          <div className="mt-8 text-center text-sm text-zinc-500">Searching...</div>
+          <div className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">Searching...</div>
         )}
 
         {results.length > 0 && (
@@ -95,11 +95,11 @@ export function SearchOverlay({
                   }}
                   className="group block"
                 >
-                  <h3 className="font-serif text-xl font-bold text-zinc-900 group-hover:text-zinc-600 transition-colors">
+                  <h3 className="font-serif text-xl font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">
                     {item.title}
                   </h3>
                   {item.dek && (
-                    <p className="mt-1 text-sm text-zinc-600 line-clamp-2">{item.dek}</p>
+                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">{item.dek}</p>
                   )}
                 </Link>
               </li>
@@ -108,7 +108,7 @@ export function SearchOverlay({
         )}
 
         {!loading && query && results.length === 0 && (
-          <p className="mt-8 text-center text-sm text-zinc-500">No results found.</p>
+          <p className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">No results found.</p>
         )}
       </div>
     </div>
