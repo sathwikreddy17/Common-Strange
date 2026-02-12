@@ -96,30 +96,30 @@ export default function NewArticlePage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <header className="mb-10">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+    <main className="mx-auto max-w-4xl px-6 py-12">
+      <header className="mb-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">New Article</h1>
-            <p className="mt-2 text-zinc-600">Create a new article draft</p>
-          </div>
-
-          <nav className="text-sm">
-            <Link className="text-zinc-700 hover:underline" href="/editor/articles">
-              ← Back to articles
+            <Link className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors mb-3" href="/editor/articles">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              All Articles
             </Link>
-          </nav>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+              ✍️ New Article
+            </h1>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Create a new article draft</p>
+          </div>
         </div>
       </header>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-6">
+      <section className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 p-6 shadow-sm">
         <form onSubmit={onSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-zinc-700">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Title <span className="text-red-500">*</span>
             </label>
             <input
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+              className="mt-1 w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-4 py-2.5 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700 focus:border-transparent"
               value={form.title}
               onChange={handleTitleChange}
               required
@@ -128,27 +128,27 @@ export default function NewArticlePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Slug <span className="text-red-500">*</span>
             </label>
             <input
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-zinc-900 font-mono text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+              className="mt-1 w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-4 py-2.5 text-zinc-900 dark:text-white font-mono text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700 focus:border-transparent"
               value={form.slug}
               onChange={handleSlugChange}
               required
               placeholder="article-url-slug"
             />
-            <p className="mt-1 text-xs text-zinc-500">
-              URL: /articles/{form.slug || "..."}
+            <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+              URL: /articles/{form.slug || "…"}
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700">
-              Dek <span className="text-zinc-400">(subtitle)</span>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Dek <span className="text-zinc-400 dark:text-zinc-500 font-normal">(subtitle)</span>
             </label>
             <input
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+              className="mt-1 w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-4 py-2.5 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700 focus:border-transparent"
               value={form.dek}
               onChange={(e) => setForm((f) => ({ ...f, dek: e.target.value }))}
               placeholder="A brief description or subtitle"
@@ -156,7 +156,7 @@ export default function NewArticlePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
               Body
             </label>
             <ArticleEditor
@@ -167,22 +167,22 @@ export default function NewArticlePage() {
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 pt-2">
             <button
               type="submit"
               disabled={saving || !form.title || !form.slug}
-              className="rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="rounded-lg bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 px-6 py-2.5 text-sm font-medium text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {saving ? "Creating..." : "Create Draft"}
+              {saving ? "Creating…" : "Create Draft"}
             </button>
             <Link
               href="/editor/articles"
-              className="text-sm text-zinc-600 hover:text-zinc-900"
+              className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
             >
               Cancel
             </Link>
@@ -190,9 +190,8 @@ export default function NewArticlePage() {
         </form>
       </section>
 
-      <section className="mt-8 rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
-        <strong>Tip:</strong> After creating, you can add hero images, assign categories, 
-        authors, and tags from the edit page.
+      <section className="mt-6 rounded-xl border border-emerald-100 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-4 text-sm text-emerald-800 dark:text-emerald-300">
+        <strong>💡 Tip:</strong> After creating, you can add hero images, assign categories, authors, and tags from the edit page.
       </section>
     </main>
   );
