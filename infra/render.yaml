@@ -1,12 +1,16 @@
 services:
+  # ── Backend API (Django + Gunicorn) ──
   - type: web
     name: commonstrange-api
-    env: python
+    runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
     startCommand: gunicorn config.wsgi:application --workers 2 --threads 2
     healthCheckPath: /v1/health/
+    plan: starter
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
       - key: DATABASE_URL
         fromDatabase:
           name: commonstrange-db
@@ -21,11 +25,11 @@ services:
       - key: DEBUG
         value: "0"
       - key: ALLOWED_HOSTS
-        sync: false
+        sync: false   # e.g. commonstrange-api.onrender.com
       - key: CORS_ALLOWED_ORIGINS
-        sync: false
+        sync: false   # e.g. https://commonstrange.onrender.com
       - key: CSRF_TRUSTED_ORIGINS
-        sync: false
+        sync: false   # e.g. https://commonstrange.onrender.com
       - key: MEDIA_USE_S3
         value: "1"
       - key: AWS_ACCESS_KEY_ID
@@ -41,13 +45,33 @@ services:
       - key: SENTRY_DSN
         sync: false
 
+  # ── Frontend (Next.js, Docker) ──
+  - type: web
+    name: commonstrange
+    runtime: docker
+    rootDir: frontend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    plan: starter
+    envVars:
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false   # e.g. https://commonstrange.onrender.com
+      - key: NEXT_PUBLIC_API_BASE
+        sync: false   # e.g. https://commonstrange-api.onrender.com
+      - key: NEXT_PUBLIC_BACKEND_BASE
+        sync: false   # e.g. https://commonstrange-api.onrender.com
+
+  # ── Celery Worker ──
   - type: worker
     name: commonstrange-worker
-    env: python
+    runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: celery -A config worker -l INFO --concurrency 2
+    plan: starter
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
       - key: DATABASE_URL
         fromDatabase:
           name: commonstrange-db
@@ -74,14 +98,17 @@ services:
       - key: SENTRY_DSN
         sync: false
 
+  # ── Publish Scheduler (every minute) ──
   - type: cron
     name: commonstrange-publish-cron
-    env: python
+    runtime: python
     rootDir: backend
     schedule: "*/1 * * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python manage.py publish_due_posts
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
       - key: DATABASE_URL
         fromDatabase:
           name: commonstrange-db
@@ -91,14 +118,17 @@ services:
       - key: DEBUG
         value: "0"
 
+  # ── Event Cleanup (every 6 hours) ──
   - type: cron
     name: commonstrange-cleanup-cron
-    env: python
+    runtime: python
     rootDir: backend
     schedule: "0 */6 * * *"
     buildCommand: pip install -r requirements.txt
     startCommand: python manage.py prune_events
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
       - key: DATABASE_URL
         fromDatabase:
           name: commonstrange-db
