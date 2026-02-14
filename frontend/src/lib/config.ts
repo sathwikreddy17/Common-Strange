@@ -13,12 +13,12 @@ const REQUIRED_ENV_VARS = {
 // Optional environment variables with defaults
 const ENV_CONFIG = {
   // API base URL for server-side requests.
-  // In Docker: set NEXT_PUBLIC_API_BASE=http://backend:8000
-  // Local dev: defaults to http://localhost:8000
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000',
+  // BACKEND_INTERNAL_URL (runtime, not baked) takes priority over NEXT_PUBLIC_API_BASE (build-time).
+  // This lets Render/PaaS override the Docker-internal URL without rebuilding.
+  API_BASE_URL: process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000',
   
   // Public site URL (for SEO, sitemaps, etc.)
-  SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
+  SITE_URL: process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
   
   // Environment name
   NODE_ENV: process.env.NODE_ENV ?? 'development',

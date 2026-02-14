@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_BASE ?? "http://localhost:8000";
+const BACKEND_BASE = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_BACKEND_BASE ?? "http://localhost:8000";
 
 const RESERVED_EXACT = new Set([
   "/admin",

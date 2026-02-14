@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const UPSTREAM = process.env.NEXT_PUBLIC_BACKEND_BASE ?? "http://backend:8000";
+const UPSTREAM = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_BACKEND_BASE ?? "http://backend:8000";
 
 function buildUpstreamUrl(req: NextRequest, pathParts: string[]) {
   const upstream = new URL(UPSTREAM);
