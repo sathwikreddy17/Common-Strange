@@ -3,14 +3,17 @@ from __future__ import annotations
 import os
 
 from django.conf import settings
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseRedirect
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
+
+from .storage import _use_cloudinary, _cloudinary_url_for_key
 
 
 class PublicMediaView(APIView):
     """Serve generated media by key.
 
+    When MEDIA_USE_CLOUDINARY=1, redirects to the Cloudinary CDN URL.
     When MEDIA_USE_S3=1, this proxies objects out of S3/MinIO (PoC-friendly).
     Otherwise it falls back to MEDIA_ROOT on disk.
 
@@ -24,6 +27,10 @@ class PublicMediaView(APIView):
         key = (key or "").lstrip("/")
         if ".." in key or key.startswith("/"):
             raise Http404
+
+        # Cloudinary: redirect to CDN
+        if _use_cloudinary():
+            return HttpResponseRedirect(_cloudinary_url_for_key(key))
 
         if getattr(settings, "MEDIA_USE_S3", False):
             return self._get_from_s3(key)

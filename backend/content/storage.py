@@ -23,12 +23,34 @@ def _bucket_prefix() -> str:
     return prefix + "/"
 
 
-def public_url_for_key(key: str) -> str:
-    """Return a public URL for a stored object key.
+def _use_cloudinary() -> bool:
+    return bool(getattr(settings, "MEDIA_USE_CLOUDINARY", False))
 
-    If MEDIA_PUBLIC_BASE_URL is configured (e.g. cdn domain), use it.
-    Otherwise, fall back to the backend proxy endpoint (/v1/media/<key>).
-    """
+
+def _cloudinary_public_id(key: str) -> str:
+    """Convert a storage key like media/9/abc123/thumb.webp → cs-media/media/9/abc123/thumb"""
+    # Strip extension for Cloudinary (it manages format separately)
+    base = key.rsplit(".", 1)[0] if "." in key else key
+    return f"cs-media/{base}"
+
+
+def _cloudinary_url_for_key(key: str) -> str:
+    """Return the Cloudinary delivery URL for a given key."""
+    import cloudinary
+    cloud_name = cloudinary.config().cloud_name or ""
+    ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
+    public_id = _cloudinary_public_id(key)
+    return f"https://res.cloudinary.com/{cloud_name}/image/upload/{public_id}.{ext}"
+
+
+def public_url_for_key(key: str) -> str:
+    """Return a public URL for a stored object key."""
+    if not key:
+        return ""
+
+    # Cloudinary: return direct CDN URL
+    if _use_cloudinary():
+        return _cloudinary_url_for_key(key)
 
     base = str(getattr(settings, "MEDIA_PUBLIC_BASE_URL", "") or "").rstrip("/")
     if base:
@@ -55,10 +77,30 @@ def _s3_client():
 def put_bytes(*, key: str, data: bytes, content_type: str) -> StoredObject:
     """Store bytes under `key`.
 
-    Uses S3-compatible storage when MEDIA_USE_S3=1. Otherwise writes to MEDIA_ROOT.
+    Uses Cloudinary when MEDIA_USE_CLOUDINARY=1, S3 when MEDIA_USE_S3=1,
+    otherwise writes to MEDIA_ROOT.
     """
-
     content_type = content_type or "application/octet-stream"
+
+    if _use_cloudinary():
+        import cloudinary.uploader
+        public_id = _cloudinary_public_id(key)
+        ext = key.rsplit(".", 1)[-1].lower() if "." in key else "bin"
+        resource_type = "image" if content_type.startswith("image/") else "raw"
+
+        result = cloudinary.uploader.upload(
+            data,
+            public_id=public_id,
+            resource_type=resource_type,
+            overwrite=True,
+            format=ext,
+        )
+        return StoredObject(
+            key=key,
+            public_url=result.get("secure_url", public_url_for_key(key)),
+            content_type=content_type,
+            size_bytes=len(data),
+        )
 
     if getattr(settings, "MEDIA_USE_S3", False):
         bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", "")
@@ -98,10 +140,13 @@ def guess_content_type(filename: str) -> str:
 
 
 def get_bytes(key: str) -> bytes:
-    """Retrieve raw bytes for a stored object by key.
+    """Retrieve raw bytes for a stored object by key."""
+    if _use_cloudinary():
+        import urllib.request
+        url = _cloudinary_url_for_key(key)
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            return resp.read()
 
-    Uses S3-compatible storage when MEDIA_USE_S3=1. Otherwise reads from MEDIA_ROOT.
-    """
     if getattr(settings, "MEDIA_USE_S3", False):
         bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", "")
         if not bucket:
@@ -116,10 +161,13 @@ def get_bytes(key: str) -> bytes:
 
 
 def delete_object(key: str) -> None:
-    """Delete a stored object by key.
+    """Delete a stored object by key."""
+    if _use_cloudinary():
+        import cloudinary.uploader
+        public_id = _cloudinary_public_id(key)
+        cloudinary.uploader.destroy(public_id, resource_type="image")
+        return
 
-    Uses S3-compatible storage when MEDIA_USE_S3=1. Otherwise deletes from MEDIA_ROOT.
-    """
     if getattr(settings, "MEDIA_USE_S3", False):
         bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME", "")
         if not bucket:

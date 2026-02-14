@@ -181,10 +181,18 @@ MEDIA_ROOT = BASE_DIR / "media"
 # ---
 MEDIA_USE_S3 = os.getenv("MEDIA_USE_S3", "0") == "1"
 
-# Safety guard: in non-debug environments, require S3 media unless explicitly overridden.
+# Cloudinary (free CDN for media in production)
+MEDIA_USE_CLOUDINARY = os.getenv("MEDIA_USE_CLOUDINARY", "0") == "1"
+CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "")
+
+if MEDIA_USE_CLOUDINARY and CLOUDINARY_URL:
+    import cloudinary
+    cloudinary.config(cloudinary_url=CLOUDINARY_URL)
+
+# Safety guard: in non-debug environments, require S3/Cloudinary media unless explicitly overridden.
 # Render filesystem is ephemeral, so filesystem media would lead to broken OG/media URLs.
 ALLOW_FILESYSTEM_MEDIA_FALLBACK = os.getenv("ALLOW_FILESYSTEM_MEDIA_FALLBACK", "0") == "1"
-if not DEBUG and not MEDIA_USE_S3 and not ALLOW_FILESYSTEM_MEDIA_FALLBACK:
+if not DEBUG and not MEDIA_USE_S3 and not MEDIA_USE_CLOUDINARY and not ALLOW_FILESYSTEM_MEDIA_FALLBACK:
     raise RuntimeError(
         "MEDIA_USE_S3 must be enabled in production (set MEDIA_USE_S3=1). "
         "If you *really* want filesystem fallback, set ALLOW_FILESYSTEM_MEDIA_FALLBACK=1."
