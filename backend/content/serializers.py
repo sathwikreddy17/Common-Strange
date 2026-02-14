@@ -207,14 +207,13 @@ class ArticleListSerializer(serializers.ModelSerializer):
         if not obj.hero_media:
             return None
         media = obj.hero_media
-        from django.conf import settings
-        base_url = getattr(settings, 'MEDIA_PUBLIC_BASE_URL', '')
+        from .storage import public_url_for_key
         return {
             "id": media.id,
-            "thumb": f"{base_url}/{media.thumb_key}" if media.thumb_key else None,
-            "medium": f"{base_url}/{media.medium_key}" if media.medium_key else None,
-            "large": f"{base_url}/{media.large_key}" if media.large_key else None,
-            "original": f"{base_url}/{media.original_key}" if media.original_key else None,
+            "thumb": public_url_for_key(media.thumb_key) if media.thumb_key else None,
+            "medium": public_url_for_key(media.medium_key) if media.medium_key else None,
+            "large": public_url_for_key(media.large_key) if media.large_key else None,
+            "original": public_url_for_key(media.original_key) if media.original_key else None,
             "width": media.width,
             "height": media.height,
             "alt": obj.title,  # Use article title as alt text
@@ -268,14 +267,13 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
         if not obj.hero_media:
             return None
         media = obj.hero_media
-        from django.conf import settings
-        base_url = getattr(settings, 'MEDIA_PUBLIC_BASE_URL', '')
+        from .storage import public_url_for_key
         return {
             "id": media.id,
-            "thumb": f"{base_url}/{media.thumb_key}" if media.thumb_key else None,
-            "medium": f"{base_url}/{media.medium_key}" if media.medium_key else None,
-            "large": f"{base_url}/{media.large_key}" if media.large_key else None,
-            "original": f"{base_url}/{media.original_key}" if media.original_key else None,
+            "thumb": public_url_for_key(media.thumb_key) if media.thumb_key else None,
+            "medium": public_url_for_key(media.medium_key) if media.medium_key else None,
+            "large": public_url_for_key(media.large_key) if media.large_key else None,
+            "original": public_url_for_key(media.original_key) if media.original_key else None,
             "width": media.width,
             "height": media.height,
             "alt": obj.title,  # Use article title as alt text
