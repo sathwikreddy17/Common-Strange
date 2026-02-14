@@ -11,11 +11,17 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
-# Provide safe defaults so `next build` can compile pages that reference
-# NEXT_PUBLIC_* variables. Real values are injected at runtime.
-ENV NEXT_PUBLIC_SITE_URL=http://localhost:3000
-ENV NEXT_PUBLIC_BACKEND_BASE=http://backend:8000
-ENV NEXT_PUBLIC_API_BASE=http://backend:8000
+
+# Accept build-time overrides for NEXT_PUBLIC_* variables.
+# Docker Compose default: http://backend:8000 (internal DNS)
+# Render / other PaaS: pass the real public API URL via --build-arg
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_BACKEND_BASE=http://backend:8000
+ARG NEXT_PUBLIC_API_BASE=http://backend:8000
+
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_BACKEND_BASE=$NEXT_PUBLIC_BACKEND_BASE
+ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 
 RUN npm run build
 
