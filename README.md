@@ -1,6 +1,8 @@
 # Common Strange (PoC)
 
-Production-shaped, local-first publishing platform.
+Production-shaped, local-first publishing platform.  
+**Live site**: [https://commonstrange.onrender.com](https://commonstrange.onrender.com)  
+**API**: [https://commonstrange-api.onrender.com](https://commonstrange-api.onrender.com)
 
 ## Source of truth: Final PoC Blueprint
 All feature work and prioritization **must** be driven by `Final PoC Blueprint.txt` (and/or `Final PoC Blueprint.docx`).
@@ -54,12 +56,13 @@ This is the canonical “PoC progress” view. Status here is measured strictly 
 - **In progress**: CDN hostname/origin wiring depends on deployment env (local/dev/prod).
 
 ### 8) Media Pipeline (Stateless, S3-compatible)
-- **Done**: Public media proxy: `GET /v1/media/<key>`.
+- **Done**: Public media proxy: `GET /v1/media/<key>` (redirects to Cloudinary in production).
 - **Done**: Public media metadata: `GET /v1/media-assets/<id>/` (includes `*_url` fields).
 - **Done**: Editor upload endpoint: `POST /v1/editor/media/upload/`.
 - **Done**: Editor recent uploads: `GET /v1/editor/media/recent/?limit=...`.
 - **Done**: Image variants (thumb/medium/large) produced.
 - **Done**: Hero images for articles (upload via editor, display on home page and article pages).
+- **Done**: Cloudinary CDN integration for production media hosting.
 - **Missing**: Video metadata model/storage beyond embeds (YouTube widget covers embed only).
 
 ### Widgets (Blueprint examples)
@@ -71,10 +74,11 @@ This is the canonical “PoC progress” view. Status here is measured strictly 
 ---
 
 ## Monorepo structure
-- `frontend/` Next.js (Vercel)
-- `backend/` Django + DRF (Render)
+- `frontend/` Next.js (Render, Docker)
+- `backend/` Django + DRF (Render, Python runtime)
 - `infra/` deployment blueprints/runbooks
 - `packages/` shared packages (currently placeholders for later extraction)
+- `.github/workflows/` CI pipeline (GitHub Actions)
 
 ---
 
@@ -87,15 +91,17 @@ This is the canonical “PoC progress” view. Status here is measured strictly 
 - Scheduled publish command: `publish_due_posts` (cron-friendly)
 
 ### Media pipeline (S3-compatible, stateless)
-Blueprint-aligned: MinIO locally / R2 in production shape.
+Blueprint-aligned: MinIO locally / Cloudinary CDN in production.
 - S3-compatible storage abstraction (`backend/content/storage.py`)
+- **Cloudinary integration** for production (free tier, 25GB/month bandwidth)
 - Editor upload endpoint: `POST /v1/editor/media/upload/`
 - Editor recent endpoint: `GET /v1/editor/media/recent/?limit=24`
 - Image variants generated as WebP (thumb/medium/large)
-- Public media proxy endpoint: `GET /v1/media/<key>`
+- Public media proxy endpoint: `GET /v1/media/<key>` (redirects to Cloudinary in prod)
 - Public media-asset metadata endpoint: `GET /v1/media-assets/<id>/`
 - MediaAsset API now returns **ready-to-use URLs** (when available):
   - `thumb_url`, `medium_url`, `large_url`, `original_url`
+- In production, URLs point to `https://res.cloudinary.com/...` CDN
 
 ### Social growth (publish-time OG images)
 - OG PNG generated at publish time and stored in object storage (`og/<slug>.png`)
@@ -319,11 +325,10 @@ Seed demo content:
 ---
 
 ## Next steps (planned / backlog)
-- Curated homepage modules (Aeon-like)
-- Richer widget set (video metadata, richer galleries, etc.)
-- Email verification for new accounts
-- Password reset flow
 - OAuth social login (Google, GitHub)
+- Comments system
+- Video metadata model beyond embeds
+- Custom domain (commonstrange.com)
 
 ---
 
@@ -335,3 +340,11 @@ Seed demo content:
 | writer1 | demo1234 | Writer | Create drafts, edit own articles, upload media |
 
 **Note**: Roles are hierarchical - Editors have all Writer permissions, Publishers have all Editor permissions.
+
+## Production Credentials
+| Username | Email | Role |
+|----------|-------|------|
+| admin | sathwikreddy1117@gmail.com | Superuser/Publisher |
+| editor1 | editor1@example.com | Editor |
+| writer1 | writer1@example.com | Writer |
+| testuser | test@example.com | Reader |

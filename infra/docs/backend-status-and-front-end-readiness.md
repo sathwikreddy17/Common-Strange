@@ -1,9 +1,15 @@
-# Backend status (Jan 2026) + what’s ready for frontend work
+# Backend status (Feb 2026) + what's ready for frontend work
 
-This document is a short “handoff” snapshot so frontend work can proceed without rediscovering backend constraints.
+This document is a short "handoff" snapshot so frontend work can proceed without rediscovering backend constraints.
 
 ## Source of truth
 All scope/priority is derived from `Final PoC Blueprint.txt`.
+
+## Deployment
+- **Live**: https://commonstrange-api.onrender.com
+- **Frontend**: https://commonstrange.onrender.com
+- See `infra/docs/render-deployment.md` for full deployment details.
+- See `infra/docs/deployment-bug-fixes.md` for issue history.
 
 ## Backend: implemented
 
@@ -14,13 +20,15 @@ All scope/priority is derived from `Final PoC Blueprint.txt`.
 - Cron-friendly publish job: `python manage.py publish_due_posts`
 
 ### Media + OG (Blueprint §7, §8)
-- S3-compatible storage abstraction.
-- Local dev uses MinIO. Production shape assumes R2/Cloudflare.
+- Multi-backend storage abstraction (`backend/content/storage.py`):
+  - **Local**: MinIO (S3-compatible) for development
+  - **Production**: Cloudinary CDN (free tier)
+  - **Future-ready**: S3/R2 support built-in
 - Editor media upload endpoint produces WebP variants.
-- Public media serving via `GET /v1/media/<key>`.
+- Public media serving via `GET /v1/media/<key>` (redirects to Cloudinary in prod).
 - Public media metadata endpoint: `GET /v1/media-assets/<id>/`.
 - Editor helper endpoint: `GET /v1/editor/media/recent/?limit=...`.
-- Media API returns ready-to-use variant URLs (when keys exist):
+- Media API returns ready-to-use variant URLs (Cloudinary CDN URLs in production):
   - `thumb_url`, `medium_url`, `large_url`, `original_url`
 
 ### Events + trending (Blueprint §3 events)
@@ -35,8 +43,9 @@ All scope/priority is derived from `Final PoC Blueprint.txt`.
 - `GET /v1/health/` (DB + cache best-effort)
 
 ## Frontend: ready (current)
-- Next.js server components fetch with header-derived absolute origin where needed.
+- Next.js server components fetch with `BACKEND_INTERNAL_URL` (runtime) for SSR.
 - Same-origin `/v1/*` proxy route exists for Docker/dev reliability.
+- Images served directly from Cloudinary CDN — no backend proxy needed.
 
 ### Widgets
 - Backend validates controlled widget schema including:
@@ -44,6 +53,7 @@ All scope/priority is derived from `Final PoC Blueprint.txt`.
 - Frontend renders:
   - `pull_quote`, `related_card`, `youtube`, `gallery`
 
-## Biggest remaining blueprint items
-1) Curated homepage modules (Aeon-like)
-2) Expanded widget set (video/gallery polish, richer embeds)
+## Biggest remaining items
+1) OAuth social login (Google, GitHub)
+2) Comments system
+3) Custom domain setup

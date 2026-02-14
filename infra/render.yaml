@@ -30,18 +30,20 @@ services:
         sync: false   # e.g. https://commonstrange.onrender.com
       - key: CSRF_TRUSTED_ORIGINS
         sync: false   # e.g. https://commonstrange.onrender.com
-      - key: MEDIA_USE_S3
+      - key: MEDIA_USE_CLOUDINARY
         value: "1"
+      - key: CLOUDINARY_URL
+        sync: false   # cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+      - key: MEDIA_USE_S3
+        value: "0"    # Set to "1" if using S3/R2 instead of Cloudinary
       - key: AWS_ACCESS_KEY_ID
-        sync: false
+        sync: false   # Only needed if MEDIA_USE_S3=1
       - key: AWS_SECRET_ACCESS_KEY
-        sync: false
+        sync: false   # Only needed if MEDIA_USE_S3=1
       - key: AWS_STORAGE_BUCKET_NAME
-        sync: false
+        sync: false   # Only needed if MEDIA_USE_S3=1
       - key: AWS_S3_ENDPOINT_URL
-        sync: false
-      - key: MEDIA_PUBLIC_BASE_URL
-        sync: false
+        sync: false   # Only needed if MEDIA_USE_S3=1
       - key: SENTRY_DSN
         sync: false
 
@@ -60,6 +62,8 @@ services:
         sync: false   # e.g. https://commonstrange-api.onrender.com
       - key: NEXT_PUBLIC_BACKEND_BASE
         sync: false   # e.g. https://commonstrange-api.onrender.com
+      - key: BACKEND_INTERNAL_URL
+        sync: false   # Runtime override for SSR; same as API base on Render
 
   # ── Celery Worker ──
   - type: worker
@@ -85,8 +89,12 @@ services:
         sync: false
       - key: DEBUG
         value: "0"
-      - key: MEDIA_USE_S3
+      - key: MEDIA_USE_CLOUDINARY
         value: "1"
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: MEDIA_USE_S3
+        value: "0"
       - key: AWS_ACCESS_KEY_ID
         sync: false
       - key: AWS_SECRET_ACCESS_KEY

@@ -13,6 +13,7 @@ This document tracks all features and fixes needed before going live.
 | | Revision snapshots (ArticleVersion) | ✅ |
 | | Scheduled publish cron job | ✅ |
 | **Media Pipeline** | S3-compatible storage (MinIO/R2) | ✅ |
+| | Cloudinary CDN for production | ✅ |
 | | Image upload + variants (thumb/medium/large) | ✅ |
 | | Hero images for articles | ✅ |
 | | Public media proxy | ✅ |
@@ -35,6 +36,9 @@ This document tracks all features and fixes needed before going live.
 | | CORS/CSRF configuration | ✅ |
 | **Infra** | render.yaml blueprint | ✅ |
 | | Docker Compose for local dev | ✅ |
+| | CI/CD pipeline (GitHub Actions) | ✅ |
+| | Cloudinary media CDN | ✅ |
+| | Production deployment on Render | ✅ |
 
 ---
 
@@ -82,22 +86,19 @@ This document tracks all features and fixes needed before going live.
 ## 📋 DEPLOYMENT CHECKLIST
 
 ```
-□ Set up Cloudflare R2 bucket for media
-□ Configure CDN (cdn.commonstrange.com)
-□ Set up Render services from render.yaml
-□ Configure Vercel deployment
-□ Set all environment variables:
-  □ Backend: DATABASE_URL, REDIS_URL, SECRET_KEY, ALLOWED_HOSTS, 
-             CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS, AWS_* for R2
-  □ Frontend: NEXT_PUBLIC_API_BASE
-□ Run migrations on production DB
-□ Create superuser account
-□ Seed initial content (or create fresh)
-□ Test full workflow: create → review → schedule → publish
-□ Test media upload end-to-end
-□ Verify sitemap.xml and robots.txt
-□ Test preview tokens
+✅ Set up Cloudinary for media (free tier CDN)
+✅ Set up Render services (backend API, frontend, Postgres, Redis)
+✅ Configure environment variables (see infra/docs/render-deployment.md)
+✅ Run migrations on production DB
+✅ Create superuser account
+✅ Migrate local database to production
+✅ Upload media assets to Cloudinary (32 files)
+✅ Test full workflow: articles displaying with images
+✅ Verify sitemap.xml and robots.txt
+✅ Set up CI/CD pipeline (GitHub Actions)
+□ Set up custom domain (commonstrange.com)
 □ Set up monitoring/alerting (Sentry DSN)
+□ Set up email SMTP for password reset/verification
 ```
 
 ---
@@ -130,4 +131,4 @@ This document tracks all features and fixes needed before going live.
 
 ---
 
-*Last updated: January 26, 2026*
+*Last updated: February 14, 2026*
