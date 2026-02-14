@@ -35,46 +35,46 @@ function getSystemPreference(): "light" | "dark" {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
-
-  // On mount, read persisted preference
-  useEffect(() => {
+  // Lazy initializer: read persisted theme synchronously to avoid a
+  // flash-of-wrong-theme and the lint warning about calling setState inside
+  // an effect.
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "system";
     const stored = localStorage.getItem("cs-theme") as Theme | null;
-    if (stored && ["light", "dark", "system"].includes(stored)) {
-      setThemeState(stored);
-    }
-  }, []);
+    return stored && ["light", "dark", "system"].includes(stored) ? stored : "system";
+  });
 
-  // Resolve and apply the theme class on <html>
+  // Track system preference as state so we can react to changes without
+  // calling setState inside an effect body (which violates
+  // react-hooks/set-state-in-effect).
+  const [systemPref, setSystemPref] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    return getSystemPreference();
+  });
+
+  // Listen for OS-level colour-scheme changes and update `systemPref`.
+  // The setState call is inside the *event handler*, not the effect body,
+  // so it satisfies the lint rule.
   useEffect(() => {
-    const resolved = theme === "system" ? getSystemPreference() : theme;
-    setResolvedTheme(resolved);
-
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(resolved);
-
-    // Also set a color-scheme for native controls
-    root.style.colorScheme = resolved;
-  }, [theme]);
-
-  // Listen for system preference changes when theme is "system"
-  useEffect(() => {
-    if (theme !== "system") return;
-
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = (e: MediaQueryListEvent) => {
-      const resolved = e.matches ? "dark" : "light";
-      setResolvedTheme(resolved);
-      document.documentElement.classList.remove("light", "dark");
-      document.documentElement.classList.add(resolved);
-      document.documentElement.style.colorScheme = resolved;
+      setSystemPref(e.matches ? "dark" : "light");
     };
-
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+  }, []);
+
+  // Derive resolvedTheme synchronously — no separate state needed.
+  const resolvedTheme: "light" | "dark" =
+    theme === "system" ? systemPref : theme;
+
+  // Apply the resolved theme to the DOM.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(resolvedTheme);
+    root.style.colorScheme = resolvedTheme;
+  }, [resolvedTheme]);
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);

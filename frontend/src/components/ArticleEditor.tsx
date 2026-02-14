@@ -56,7 +56,6 @@ export default function ArticleEditor({
   // Insert formatting at cursor
   const insertFormatting = useCallback(
     (before: string, after: string = "", defaultText: string = "") => {
-      const selection = window.getSelection();
       const editor = editorRef.current;
       if (!editor) return;
 
@@ -291,7 +290,7 @@ export default function ArticleEditor({
       const olMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
       if (olMatch) {
         const listItems: { num: number; content: string }[] = [];
-        let startNum = parseInt(olMatch[1], 10);
+        const startNum = parseInt(olMatch[1], 10);
         
         while (i < lines.length) {
           const listLine = lines[i].trim();

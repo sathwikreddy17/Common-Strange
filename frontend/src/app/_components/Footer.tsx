@@ -23,10 +23,13 @@ export function Footer() {
             <Link href="/tags" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
               Tags
             </Link>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/v1/feed/rss/"
               className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
               title="RSS Feed"
+              rel="alternate"
+              type="application/rss+xml"
             >
               RSS
             </a>

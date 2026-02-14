@@ -38,6 +38,7 @@ jobs:
       POSTGRES_USER: commonstrange
       POSTGRES_PASSWORD: commonstrange
       SECRET_KEY: ci-test-secret-key-not-for-production
+      ALLOW_FILESYSTEM_MEDIA_FALLBACK: "1"
 
     steps:
       - uses: actions/checkout@v4

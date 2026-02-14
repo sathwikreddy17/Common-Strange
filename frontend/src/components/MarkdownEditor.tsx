@@ -117,7 +117,7 @@ export default function MarkdownEditor({
     md = md.replace(/^\*\*(\d+)\.\s*\**([^*\n]+)\*+\s*$/gm, "<h2><strong>$1. $2</strong></h2>");
     md = md.replace(/^\*\*(\d+)\.\s*([^*\n]+)$/gm, "<h2><strong>$1. $2</strong></h2>");
     
-    let html = md
+    const html = md
       // Headers
       .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
       .replace(/^### (.+)$/gm, "<h3>$1</h3>")

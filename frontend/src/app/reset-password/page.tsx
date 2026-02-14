@@ -11,14 +11,16 @@ function ResetPasswordForm() {
 
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [status, setStatus] = useState<"validating" | "valid" | "invalid" | "loading" | "success" | "error">("validating");
-  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"validating" | "valid" | "invalid" | "loading" | "success" | "error">(() => {
+    // If there's no token, start as invalid immediately to avoid calling
+    // setState inside the effect body (react-hooks/set-state-in-effect).
+    return token ? "validating" : "invalid";
+  });
+  const [message, setMessage] = useState(() => (token ? "" : "No reset token provided."));
 
   // Validate token on mount
   useEffect(() => {
     if (!token) {
-      setStatus("invalid");
-      setMessage("No reset token provided.");
       return;
     }
 

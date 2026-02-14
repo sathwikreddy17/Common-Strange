@@ -250,7 +250,7 @@ function extractTocFromHtml(html: string): TocItem[] {
     if (!text) continue;
 
     // Generate a stable slug-based ID
-    let baseId = text
+    const baseId = text
       .toLowerCase()
       .replace(/[^\w\s-]/g, "")
       .replace(/\s+/g, "-")
