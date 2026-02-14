@@ -261,10 +261,20 @@ REST_FRAMEWORK = {
 _csrf_trusted = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(",") if o.strip()]
 
-# Cross-site cookie settings for Vercel → Render setup
-CSRF_COOKIE_SAMESITE = "None" if not DEBUG else "Lax"
+# Cookie security settings.
+# SameSite=Lax is the correct default — it prevents the session cookie from
+# being sent on cross-site requests (iframes, link previews, etc.) while
+# still working for same-site top-level navigations.  The old "None" value
+# was needed only for a true cross-origin (different registrable domain)
+# frontend→backend setup.  Since both services live under *.onrender.com
+# they are same-site and Lax is both safer and sufficient.
+#
+# Safari in particular mishandles SameSite=None cookies: session tokens can
+# leak through Handoff, iCloud shared state, and iMessage link previews,
+# which let anyone who opens a shared link inherit the sender's session.
+CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_SAMESITE = "None" if not DEBUG else "Lax"
+SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
 

@@ -80,6 +80,15 @@
 
 ---
 
+## Issue #7: Safari Session Leakage via Shared Links (SameSite=None)
+**Date**: Feb 14, 2026  
+**Symptom**: When an admin shares the site URL (e.g. via iMessage) and the recipient opens it in Safari, they inherit the admin's authenticated session — full admin access without credentials. Chrome was unaffected.  
+**Root Cause**: `SESSION_COOKIE_SAMESITE` and `CSRF_COOKIE_SAMESITE` were set to `"None"` in production. This was originally intended for a cross-origin frontend→backend setup (different registrable domains), but both services live under `*.onrender.com`, making them **same-site**. Safari has known issues with `SameSite=None` cookies: they can leak through iCloud Handoff, shared link previews, Universal Links, and iMessage link unfurling — allowing the recipient's Safari to send the sender's session cookie.  
+**Fix**: Changed both `SESSION_COOKIE_SAMESITE` and `CSRF_COOKIE_SAMESITE` to `"Lax"` unconditionally (both dev and production). `Lax` is the W3C-recommended default: it sends cookies on same-site top-level navigations (which is what the frontend→backend proxy needs) but blocks them on cross-site/embedded contexts (which prevents the leak).  
+**Key Lesson**: Only use `SameSite=None` when the frontend and backend are on **different** registrable domains (e.g. `myapp.com` → `api.myapp.io`). When they share a registrable domain (e.g. `*.onrender.com`), `Lax` is correct and much safer.
+
+---
+
 ## Summary of Key Architecture Decisions
 
 ### Media Storage Strategy
@@ -102,6 +111,11 @@ Fallback:               NEXT_PUBLIC_API_BASE → http://localhost:8000
 
 ### Cookie/Session Configuration
 ```
-Production: SameSite=None, Secure=True  (cross-origin Render domains)
-Dev:        SameSite=Lax, Secure=False  (localhost)
+Production: SameSite=Lax, Secure=True   (same-site *.onrender.com domains)
+Dev:        SameSite=Lax, Secure=False   (localhost)
 ```
+
+Note: SameSite=None was originally used assuming a cross-origin setup, but
+since both services share the *.onrender.com registrable domain they are
+same-site. Lax prevents Safari session leakage through shared links / iCloud
+Handoff.

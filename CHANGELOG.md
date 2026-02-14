@@ -6,6 +6,9 @@ All notable changes to Common Strange are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **CRITICAL: Safari session leakage** — `SameSite=None` cookies allowed Safari to leak admin sessions through shared links (iMessage, iCloud Handoff). Changed to `SameSite=Lax` which is correct for same-site `*.onrender.com` deployments.
+
 ### Remaining
 - OAuth social login (Google, GitHub)
 - Comments system
