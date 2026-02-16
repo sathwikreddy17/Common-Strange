@@ -7,8 +7,8 @@ import { HomeShell } from "./_components/HomeShell";
 import { Footer } from "./_components/Footer";
 import { NewsletterCTA } from "./_components/NewsletterCTA";
 
-// ----- Revalidate every 60 seconds (ISR) -----
-export const revalidate = 60;
+// ----- Revalidate every 30 seconds (ISR) -----
+export const revalidate = 30;
 
 export const metadata: Metadata = {
   title: "Common Strange — Ideas that expand your perspective",
@@ -107,7 +107,7 @@ function extractResults<T>(data: T[] | PaginatedResponse<T>): T[] {
 async function fetchArticles(): Promise<PublicArticleListItem[]> {
   try {
     const url = getApiUrl("v1/articles/?status=published");
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) return [];
     const data = await res.json();
     return extractResults(data);
@@ -119,7 +119,7 @@ async function fetchArticles(): Promise<PublicArticleListItem[]> {
 async function fetchTrending(): Promise<TrendingItem[]> {
   try {
     const url = getApiUrl("v1/trending?limit=10");
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : [];
@@ -131,7 +131,7 @@ async function fetchTrending(): Promise<TrendingItem[]> {
 async function fetchCuratedModules(): Promise<CuratedModule[]> {
   try {
     const url = getApiUrl("v1/home/modules/");
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) return [];
     const data = await res.json();
     return extractResults(data);

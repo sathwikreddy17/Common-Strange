@@ -7,6 +7,7 @@ from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from rest_framework import generics, permissions, status
+from django.db.models import F
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -77,7 +78,7 @@ class PublicArticleListView(generics.ListAPIView):
         if tag_slug:
             qs = qs.filter(tags__slug=tag_slug)
 
-        return qs.order_by("-published_at", "-updated_at")
+        return qs.order_by(F("published_at").desc(nulls_last=True), "-updated_at")
 
 
 class PublicArticleDetailView(generics.RetrieveAPIView):
@@ -148,7 +149,7 @@ class TagArticleListView(generics.ListAPIView):
             .distinct()
             .select_related("category", "series")
             .prefetch_related("authors", "tags")
-            .order_by("-published_at", "-updated_at")
+            .order_by(F("published_at").desc(nulls_last=True), "-updated_at")
         )
 
 
@@ -161,7 +162,7 @@ class CategoryArticleListView(generics.ListAPIView):
             Article.objects.filter(category__slug=slug, status=ArticleStatus.PUBLISHED)
             .select_related("category", "series")
             .prefetch_related("authors", "tags")
-            .order_by("-published_at", "-updated_at")
+            .order_by(F("published_at").desc(nulls_last=True), "-updated_at")
         )
 
 
@@ -186,7 +187,7 @@ class SeriesArticleListView(generics.ListAPIView):
             Article.objects.filter(series__slug=slug, status=ArticleStatus.PUBLISHED)
             .select_related("category", "series")
             .prefetch_related("authors", "tags")
-            .order_by("-published_at", "-updated_at")
+            .order_by(F("published_at").desc(nulls_last=True), "-updated_at")
         )
 
 
@@ -200,7 +201,7 @@ class AuthorArticleListView(generics.ListAPIView):
             .distinct()
             .select_related("category", "series")
             .prefetch_related("authors", "tags")
-            .order_by("-published_at", "-updated_at")
+            .order_by(F("published_at").desc(nulls_last=True), "-updated_at")
         )
 
 
