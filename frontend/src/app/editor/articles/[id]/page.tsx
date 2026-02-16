@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import EditFormClient from "./EditFormClient";
 import WorkflowButtons from "./workflow-buttons";
 
+import { getApiUrl } from "@/lib/config";
+
 type HeroImage = {
   id: number;
   thumb: string | null;
@@ -42,7 +44,7 @@ async function fetchArticle(id: string): Promise<EditorialArticleDetail | null> 
       .map(c => `${c.name}=${c.value}`)
       .join('; ');
     
-    const res = await fetch(`http://backend:8000/v1/editor/articles/${id}/`, {
+    const res = await fetch(getApiUrl(`/v1/editor/articles/${id}/`), {
       cache: "no-store",
       headers: {
         Cookie: cookieHeader,

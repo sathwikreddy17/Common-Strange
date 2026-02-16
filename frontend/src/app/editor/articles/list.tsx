@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { getApiUrl } from "@/lib/config";
 
 export type EditorialArticle = {
   id: number;
@@ -18,7 +19,7 @@ export async function fetchEditorialArticles(): Promise<EditorialArticle[]> {
     .map(c => `${c.name}=${c.value}`)
     .join('; ');
 
-  const res = await fetch("http://backend:8000/v1/editor/articles/", {
+  const res = await fetch(getApiUrl("/v1/editor/articles/"), {
     cache: "no-store",
     headers: {
       Cookie: cookieHeader,

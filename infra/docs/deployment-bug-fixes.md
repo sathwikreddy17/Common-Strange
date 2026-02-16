@@ -119,3 +119,16 @@ Note: SameSite=None was originally used assuming a cross-origin setup, but
 since both services share the *.onrender.com registrable domain they are
 same-site. Lax prevents Safari session leakage through shared links / iCloud
 Handoff.
+
+### Hardcoded Docker URLs in Server Components
+Some server-side components (RSC) were written with hardcoded
+`http://backend:8000` fetch URLs instead of using `getApiUrl()`. These work
+in Docker Compose (where `backend` is a valid DNS name) but fail on Render
+where there is no such hostname.
+
+**Affected files** (fixed in PR #2):
+- `frontend/src/app/editor/articles/[id]/page.tsx` — article detail fetch
+- `frontend/src/app/editor/articles/list.tsx` — article list fetch
+
+**Pattern**: Always use `getApiUrl(path)` from `@/lib/config` for server-side
+fetches. Never hardcode `http://backend:8000` or `http://localhost:8000`.

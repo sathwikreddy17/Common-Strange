@@ -8,6 +8,7 @@ All notable changes to Common Strange are documented here.
 
 ### Fixed
 - **CRITICAL: Safari session leakage** — `SameSite=None` cookies allowed Safari to leak admin sessions through shared links (iMessage, iCloud Handoff). Changed to `SameSite=Lax` which is correct for same-site `*.onrender.com` deployments.
+- **Editor 404 on Render** — `editor/articles/[id]/page.tsx` and `editor/articles/list.tsx` had hardcoded `http://backend:8000` (Docker-internal hostname). Replaced with `getApiUrl()` which reads `BACKEND_INTERNAL_URL` from the environment, fixing both "Save Draft" redirects and "Edit →" links in the editorial pipeline.
 
 ### Remaining
 - OAuth social login (Google, GitHub)
