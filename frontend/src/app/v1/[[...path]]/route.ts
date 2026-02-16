@@ -12,7 +12,7 @@ function buildUpstreamUrl(req: NextRequest, pathParts: string[]) {
   return upstream;
 }
 
-function forwardHeaders(req: NextRequest): HeadersInit {
+function forwardHeaders(req: NextRequest, upstreamUrl: URL): HeadersInit {
   const headers: HeadersInit = {
     accept: req.headers.get("accept") ?? "application/json",
   };
@@ -33,6 +33,25 @@ function forwardHeaders(req: NextRequest): HeadersInit {
   const contentType = req.headers.get("content-type");
   if (contentType) {
     headers["content-type"] = contentType;
+  }
+
+  // Django's CSRF middleware requires a Referer header on HTTPS requests.
+  // The browser sends Referer to *this* proxy, but server-side fetch() to
+  // Django strips it.  Re-attach the original Referer/Origin so Django can
+  // match them against CSRF_TRUSTED_ORIGINS.  If the browser didn't send
+  // one (e.g. Referrer-Policy: no-referrer), synthesise it from the
+  // incoming request URL so "no Referer" errors never reach the user.
+  const referer = req.headers.get("referer");
+  if (referer) {
+    headers["referer"] = referer;
+  } else {
+    // Fallback: use the upstream URL itself so Django sees *something*
+    headers["referer"] = upstreamUrl.origin + "/";
+  }
+
+  const origin = req.headers.get("origin");
+  if (origin) {
+    headers["origin"] = origin;
   }
 
   return headers;
@@ -62,7 +81,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path?: stri
 
   const res = await fetch(url.toString(), {
     method: "GET",
-    headers: forwardHeaders(req),
+    headers: forwardHeaders(req, url),
   });
 
   return buildResponse(res);
@@ -74,7 +93,7 @@ export async function HEAD(req: NextRequest, ctx: { params: Promise<{ path?: str
 
   const res = await fetch(url.toString(), {
     method: "HEAD",
-    headers: forwardHeaders(req),
+    headers: forwardHeaders(req, url),
   });
 
   return buildResponse(res);
@@ -86,7 +105,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ path?: str
 
   const res = await fetch(url.toString(), {
     method: "POST",
-    headers: forwardHeaders(req),
+    headers: forwardHeaders(req, url),
     body: await req.arrayBuffer(),
   });
 
@@ -99,7 +118,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ path?: stri
 
   const res = await fetch(url.toString(), {
     method: "PUT",
-    headers: forwardHeaders(req),
+    headers: forwardHeaders(req, url),
     body: await req.arrayBuffer(),
   });
 
@@ -112,7 +131,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ path?: st
 
   const res = await fetch(url.toString(), {
     method: "PATCH",
-    headers: forwardHeaders(req),
+    headers: forwardHeaders(req, url),
     body: await req.arrayBuffer(),
   });
 
@@ -125,7 +144,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ path?: s
 
   const res = await fetch(url.toString(), {
     method: "DELETE",
-    headers: forwardHeaders(req),
+    headers: forwardHeaders(req, url),
   });
 
   return buildResponse(res);
