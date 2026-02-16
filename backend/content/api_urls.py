@@ -74,6 +74,7 @@ urlpatterns = [
                 # Articles
                 path("articles/", views.EditorArticleListCreateView.as_view(), name="editor-article-list-create"),
                 path("articles/<int:pk>/", views.EditorArticleUpdateView.as_view(), name="editor-article-update"),
+                path("articles/<int:pk>/delete/", views.EditorArticleDeleteView.as_view(), name="editor-article-delete"),
                 path("articles/<int:pk>/submit/", views.EditorSubmitView.as_view(), name="editor-article-submit"),
                 path("articles/<int:pk>/approve/", views.EditorApproveView.as_view(), name="editor-article-approve"),
                 path("articles/<int:pk>/schedule/", views.EditorScheduleView.as_view(), name="editor-article-schedule"),

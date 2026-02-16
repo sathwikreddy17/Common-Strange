@@ -58,9 +58,29 @@ async function fetchArticle(id: string): Promise<EditorialArticleDetail | null> 
   }
 }
 
+async function fetchUserRole(): Promise<string> {
+  try {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.getAll()
+      .map(c => `${c.name}=${c.value}`)
+      .join('; ');
+    
+    const res = await fetch(getApiUrl("/v1/auth/me/"), {
+      cache: "no-store",
+      headers: { Cookie: cookieHeader },
+    });
+    if (!res.ok) return "reader";
+    const data = await res.json();
+    if (data.user?.is_staff || data.user?.role === "admin") return "admin";
+    return data.user?.role ?? "reader";
+  } catch {
+    return "reader";
+  }
+}
+
 export default async function EditorArticleEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const article = await fetchArticle(id);
+  const [article, userRole] = await Promise.all([fetchArticle(id), fetchUserRole()]);
   if (!article) notFound();
 
   return (
@@ -117,7 +137,7 @@ export default async function EditorArticleEditPage({ params }: { params: Promis
       <EditFormClient article={article} />
       
       <div className="mt-6 p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-200 dark:border-zinc-700">
-        <WorkflowButtons id={article.id} status={article.status} />
+        <WorkflowButtons id={article.id} status={article.status} userRole={userRole} />
       </div>
     </main>
   );

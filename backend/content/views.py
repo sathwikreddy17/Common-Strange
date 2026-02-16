@@ -423,6 +423,15 @@ class EditorArticleUpdateView(generics.RetrieveUpdateAPIView):
     serializer_class = InputSerializer
 
 
+class EditorArticleDeleteView(generics.DestroyAPIView):
+    """Allow DELETE for editors and publishers only.
+
+    Writers cannot delete articles — only Editors and Publishers can.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsEditor]
+    queryset = Article.objects.all()
+
+
 class EditorSubmitView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsWriter]
 
