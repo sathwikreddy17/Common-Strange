@@ -87,13 +87,8 @@ function htmlToMarkdown(html: string): string {
     .trim();
 }
 
-/* ── Font-size presets ──────────────────────────────────────────── */
-const FONT_SIZES = [
-  { label: "Small", value: 13 },
-  { label: "Default", value: 15 },
-  { label: "Large", value: 17 },
-  { label: "X-Large", value: 19 },
-] as const;
+/* ── Font-size presets (Notepad-style numbered sizes) ───────────── */
+const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36] as const;
 
 type ArticleEditorProps = {
   value: string;
@@ -117,7 +112,7 @@ export default function ArticleEditor({
   const [charCount, setCharCount] = useState(0);
   const [readingTime, setReadingTime] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [fontSize, setFontSize] = useState(15);
+  const [fontSize, setFontSize] = useState(14);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [findText, setFindText] = useState("");
   const [replaceText, setReplaceText] = useState("");
@@ -604,9 +599,9 @@ export default function ArticleEditor({
       style={{ height: isFullscreen ? "100vh" : "calc(100vh - 200px)", minHeight: "600px" }}
     >
       {/* Top toolbar */}
-      <div className="flex-none border-b border-zinc-200 bg-zinc-50 px-4 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
+      <div className="flex-none border-b border-zinc-200 bg-zinc-50 px-3 py-2 overflow-x-auto">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Headings dropdown */}
             <div className="relative group">
               <ToolbarButton onClick={() => {}} title="Headings">
@@ -766,11 +761,11 @@ export default function ArticleEditor({
                 value={fontSize}
                 onChange={(e) => setFontSize(Number(e.target.value))}
                 title="Font Size"
-                className="appearance-none bg-white border border-zinc-200 rounded-md px-2 py-1.5 pr-6 text-xs font-medium text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 cursor-pointer"
+                className="appearance-none bg-white border border-zinc-200 rounded-md pl-2 pr-6 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 cursor-pointer tabular-nums"
               >
-                {FONT_SIZES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label} ({s.value}px)
+                {FONT_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
                   </option>
                 ))}
               </select>
@@ -794,7 +789,7 @@ export default function ArticleEditor({
           </div>
 
           {/* Right side - View toggle and actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* View mode toggle */}
             <div className="flex bg-zinc-100 rounded-lg p-0.5">
               <button
@@ -1146,6 +1141,7 @@ export default function ArticleEditor({
             <div className="flex-1 overflow-auto">
               <div
                 className="prose prose-zinc max-w-none p-6"
+                style={{ fontSize: `${fontSize}px` }}
                 dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
               />
             </div>
