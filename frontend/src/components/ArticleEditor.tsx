@@ -260,6 +260,8 @@ export default function ArticleEditor({
   isSaving = false,
 }: ArticleEditorProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
 
   const turndown = useMemo(() => createTurndown(), []);
 
@@ -312,6 +314,12 @@ export default function ArticleEditor({
           setIsFullscreen((f) => !f);
           return true;
         }
+        // Ctrl+P → toggle preview
+        if ((event.ctrlKey || event.metaKey) && event.key === "p") {
+          event.preventDefault();
+          setShowPreview((p) => !p);
+          return true;
+        }
         return false;
       },
     },
@@ -327,6 +335,7 @@ export default function ArticleEditor({
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         const html = ed.getHTML();
+        setPreviewHtml(html);
         const md = turndown.turndown(html);
         onChange(md);
       }, 300);
@@ -396,7 +405,7 @@ export default function ArticleEditor({
       }}
     >
       {/* ─── Toolbar ─── */}
-      <div className="flex-none border-b border-zinc-200 bg-zinc-50 px-3 py-1.5 overflow-x-auto">
+      <div className="flex-none border-b border-zinc-200 bg-zinc-50 px-3 py-1.5 overflow-x-auto overflow-y-visible relative z-20">
         <div className="flex items-center gap-0.5 min-w-0">
           {/* Undo / Redo */}
           <ToolbarBtn
@@ -585,6 +594,22 @@ export default function ArticleEditor({
           {/* Spacer */}
           <div className="flex-1" />
 
+          {/* Split Preview */}
+          <ToolbarBtn
+            onClick={() => {
+              if (!showPreview && editor) {
+                setPreviewHtml(editor.getHTML());
+              }
+              setShowPreview(!showPreview);
+            }}
+            active={showPreview}
+            title={showPreview ? "Hide Preview (Ctrl+P)" : "Split Preview (Ctrl+P)"}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
+            </svg>
+          </ToolbarBtn>
+
           {/* Fullscreen */}
           <ToolbarBtn
             onClick={() => setIsFullscreen(!isFullscreen)}
@@ -680,9 +705,35 @@ export default function ArticleEditor({
         </BubbleBtn>
       </BubbleMenu>
 
-      {/* ─── Editor content ─── */}
-      <div className="flex-1 overflow-auto">
-        <EditorContent editor={editor} className="h-full" />
+      {/* ─── Editor content (+ optional split preview) ─── */}
+      <div className={`flex-1 overflow-hidden flex ${showPreview ? "divide-x divide-zinc-200" : ""}`}>
+        {/* Editor pane */}
+        <div className={`overflow-auto ${showPreview ? "w-1/2" : "w-full"}`}>
+          <EditorContent editor={editor} className="h-full" />
+        </div>
+
+        {/* Preview pane */}
+        {showPreview && (
+          <div className="w-1/2 overflow-auto bg-white">
+            <div className="px-2 py-1.5 bg-zinc-100 border-b border-zinc-200 flex items-center justify-between sticky top-0 z-10">
+              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Preview</span>
+              <button
+                type="button"
+                onClick={() => setShowPreview(false)}
+                className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                title="Close preview"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div
+              className="prose prose-zinc max-w-none px-6 py-4"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
+          </div>
+        )}
       </div>
 
       {/* ─── Status bar ─── */}
@@ -711,6 +762,12 @@ export default function ArticleEditor({
                 Ctrl+B
               </kbd>{" "}
               Bold
+            </span>
+            <span className="text-zinc-400">
+              <kbd className="px-1 py-0.5 bg-zinc-200 rounded text-[10px]">
+                Ctrl+P
+              </kbd>{" "}
+              Preview
             </span>
             <span className="text-zinc-400">
               <kbd className="px-1 py-0.5 bg-zinc-200 rounded text-[10px]">
@@ -774,7 +831,7 @@ function HeadingDropdown({ editor }: { editor: Editor }) {
         </svg>
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-xl z-30 py-1 min-w-[160px]">
+        <div className="absolute left-0 top-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-xl z-[9999] py-1 min-w-[160px]">
           <button
             type="button"
             onMouseDown={(e) => {
