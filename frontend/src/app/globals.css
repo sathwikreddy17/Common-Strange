@@ -337,3 +337,28 @@ html {
 .dark .prose-zinc {
   color: #d4d4d8;
 }
+
+/* ============================================
+   TIPTAP EDITOR STYLES
+   ============================================ */
+
+/* Placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  color: #a1a1aa;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Focus outline for the editor */
+.tiptap:focus {
+  outline: none;
+}
+
+/* Highlight mark */
+.tiptap mark {
+  background-color: #fef08a; /* yellow-200 */
+  padding: 0.1em 0.15em;
+  border-radius: 0.15em;
+}
