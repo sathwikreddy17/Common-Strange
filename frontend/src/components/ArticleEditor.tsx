@@ -119,6 +119,28 @@ export default function ArticleEditor({
   const [findCount, setFindCount] = useState(0);
   const [paragraphCount, setParagraphCount] = useState(0);
 
+  // Apply font size — wraps selected text in a span; changes global size if nothing selected
+  const applyFontSize = useCallback(
+    (size: number) => {
+      setFontSize(size);
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      if (start === end) return; // no selection → just change global size
+      const selected = value.substring(start, end);
+      // Don't double-wrap if already wrapped
+      const wrapped = `<span style="font-size:${size}px">${selected}</span>`;
+      const newValue = value.substring(0, start) + wrapped + value.substring(end);
+      onChange(newValue);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start, start + wrapped.length);
+      }, 0);
+    },
+    [value, onChange]
+  );
+
   // Calculate stats
   useEffect(() => {
     const words = value.trim().split(/\s+/).filter(Boolean).length;
@@ -297,6 +319,11 @@ export default function ArticleEditor({
     // Process inline formatting (applied to text content)
     const processInline = (text: string): string => {
       return text
+        // Pass through inline font-size spans (must come before other rules)
+        .replace(
+          /<span style="font-size:(\d+)px">(.*?)<\/span>/g,
+          '<span style="font-size:$1px">$2</span>'
+        )
         // Code first (preserve content)
         .replace(/`([^`]+)`/g, '<code class="bg-zinc-100 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
         // Bold and italic combined
@@ -755,12 +782,12 @@ export default function ArticleEditor({
 
             <ToolbarDivider />
 
-            {/* Font size selector */}
+            {/* Font size selector — select text first to apply to selection only */}
             <div className="relative">
               <select
                 value={fontSize}
-                onChange={(e) => setFontSize(Number(e.target.value))}
-                title="Font Size"
+                onChange={(e) => applyFontSize(Number(e.target.value))}
+                title="Font Size — select text first to resize just that part"
                 className="appearance-none bg-white border border-zinc-200 rounded-md pl-2 pr-6 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 cursor-pointer tabular-nums"
               >
                 {FONT_SIZES.map((size) => (
