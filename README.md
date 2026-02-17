@@ -173,38 +173,59 @@ Editor UI:
 - `/editor/articles/new` create new articles
 - `/editor/articles/[id]` edit articles:
   - Title, dek, body markdown
-  - **ArticleEditor** - Split-view markdown editor with live preview
+  - **ArticleEditor** — TipTap WYSIWYG rich text editor (see below)
   - Hero image upload with preview
   - Taxonomy assignment (category, series, authors, tags)
   - Workflow buttons (submit/approve/schedule/publish)
+  - **Delete article** with confirmation dialog (role-gated)
 - `/editor/media` upload + lookup + recent uploads picker
 - `/editor/users` user management (Publisher only)
 - Consistent navigation with Home links throughout
+- `/editor/analytics` editorial analytics dashboard
 
-### Markdown Rendering System
-The platform uses a unified markdown rendering approach between editor preview and public frontend:
+### Article Editor (TipTap WYSIWYG)
+The editor was rebuilt from a raw markdown textarea into a professional **TipTap** (ProseMirror-based) rich text editor. Writers see formatted text as they type — no raw markdown or HTML tags visible.
 
-**Backend Processing** (`serializers.py`):
-- Converts markdown to sanitized HTML using `mistune` library
-- Smart preprocessing handles bold numbered headings (`**1. Title**`)
-- **Section Detection**: Distinguishes main sections (h2) from sub-sections (h4)
-  - Main sections: Sequential numbered headings (1, 2, 3, 4...)
-  - Sub-sections: When numbering resets to 1 within a section
-- XSS protection via `bleach` sanitization
-- Line break preservation within paragraphs
+**Core features:**
+- Full WYSIWYG editing — what you see is what you get
+- **Undo/Redo** (Ctrl+Z / Ctrl+Shift+Z) — full ProseMirror history stack
+- **Headings dropdown** — Paragraph, H1, H2, H3, H4
+- **Font size selector** — 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36px
+- **Inline formatting** — Bold, Italic, Underline, Strikethrough, Highlight
+- **Lists** — Bullet and Ordered
+- **Block elements** — Blockquote, Code Block, Inline Code, Horizontal Rule
+- **Link insertion** with URL prompt
+- **Text alignment** — Left, Center, Right
 
-**Frontend Editor** (`ArticleEditor.tsx`):
-- Split-view editor with Edit/Split/Preview modes
-- Matching preview parser for editor-frontend parity
-- Same smart heading detection as backend
-- Real-time word count and reading time estimates
-- Keyboard shortcuts (Ctrl+S save, Ctrl+B bold, Ctrl+I italic)
-- Fullscreen editing mode (Ctrl+\\)
+**Split-screen preview:**
+- Toggle button in toolbar (or Ctrl+P) opens a side-by-side preview pane
+- Preview renders the same prose styles as the public article pages
+- Live-updates as you type (debounced for performance)
 
-**Typography** (`globals.css`):
-- h2: Main section headings (1.5em, bold, prominent spacing)
-- h4: Sub-section headings (1.1em, semibold, tighter spacing)
-- Proper list styling and paragraph spacing
+**Floating BubbleMenu:**
+- Select any text → floating toolbar appears for quick Bold/Italic/Underline/Strikethrough/Link/Highlight
+
+**Keyboard shortcuts:**
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+Z | Undo |
+| Ctrl+Shift+Z | Redo |
+| Ctrl+B | Bold |
+| Ctrl+I | Italic |
+| Ctrl+U | Underline |
+| Ctrl+S | Save |
+| Ctrl+P | Toggle split preview |
+| Ctrl+\\ | Toggle fullscreen |
+| Escape | Exit fullscreen |
+
+**Status bar:**
+- Word count, character count, estimated reading time
+- Keyboard shortcut hints
+
+**Backend compatibility:**
+- Content stored as markdown (`body_md`) — TipTap HTML is converted to markdown via Turndown on every edit
+- Existing articles load by converting markdown → HTML for TipTap
+- Zero breaking changes to the API or data model
 
 Auth pages:
 - `/login` user login with Home link
@@ -245,6 +266,7 @@ Base: `/v1/editor/`
   - `POST /articles/` - Create new article
   - `GET /articles/<id>/` - Get article details
   - `PUT|PATCH /articles/<id>/` - Update article
+  - `DELETE /articles/<id>/` - Delete article (Editor+ role)
   - Workflow transitions + preview tokens
 - Taxonomy: categories/authors/series/tags (CRUD)
 - Media:
