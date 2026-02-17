@@ -2,6 +2,99 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
+/* ── HTML → Markdown paste converter ────────────────────────────── */
+function htmlToMarkdown(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  function walk(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+    const children = Array.from(el.childNodes).map(walk).join("");
+
+    switch (tag) {
+      case "b":
+      case "strong":
+        return `**${children}**`;
+      case "i":
+      case "em":
+        return `*${children}*`;
+      case "u":
+        return children; // markdown has no underline
+      case "s":
+      case "del":
+      case "strike":
+        return `~~${children}~~`;
+      case "code":
+        return `\`${children}\``;
+      case "pre":
+        return `\n\`\`\`\n${el.textContent}\n\`\`\`\n`;
+      case "a": {
+        const href = el.getAttribute("href") ?? "";
+        return href ? `[${children}](${href})` : children;
+      }
+      case "img": {
+        const src = el.getAttribute("src") ?? "";
+        const alt = el.getAttribute("alt") ?? "";
+        return `![${alt}](${src})`;
+      }
+      case "h1":
+        return `\n# ${children}\n`;
+      case "h2":
+        return `\n## ${children}\n`;
+      case "h3":
+        return `\n### ${children}\n`;
+      case "h4":
+        return `\n#### ${children}\n`;
+      case "h5":
+        return `\n##### ${children}\n`;
+      case "h6":
+        return `\n###### ${children}\n`;
+      case "blockquote":
+        return "\n" + children.trim().split("\n").map((l) => `> ${l}`).join("\n") + "\n";
+      case "br":
+        return "\n";
+      case "hr":
+        return "\n---\n";
+      case "p":
+        return `\n${children}\n`;
+      case "li": {
+        const parent = el.parentElement;
+        if (parent?.tagName.toLowerCase() === "ol") {
+          const idx = Array.from(parent.children).indexOf(el) + 1;
+          return `${idx}. ${children.trim()}\n`;
+        }
+        return `- ${children.trim()}\n`;
+      }
+      case "ul":
+      case "ol":
+        return `\n${children}`;
+      case "div":
+      case "section":
+      case "article":
+      case "main":
+      case "span":
+        return children;
+      default:
+        return children;
+    }
+  }
+
+  return walk(doc.body)
+    .replace(/\n{3,}/g, "\n\n") // collapse excessive newlines
+    .trim();
+}
+
+/* ── Font-size presets ──────────────────────────────────────────── */
+const FONT_SIZES = [
+  { label: "Small", value: 13 },
+  { label: "Default", value: 15 },
+  { label: "Large", value: 17 },
+  { label: "X-Large", value: 19 },
+] as const;
+
 type ArticleEditorProps = {
   value: string;
   onChange: (value: string) => void;
@@ -18,19 +111,38 @@ export default function ArticleEditor({
   isSaving = false,
 }: ArticleEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [viewMode, setViewMode] = useState<"split" | "edit" | "preview">("split");
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
   const [readingTime, setReadingTime] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fontSize, setFontSize] = useState(15);
+  const [showFindReplace, setShowFindReplace] = useState(false);
+  const [findText, setFindText] = useState("");
+  const [replaceText, setReplaceText] = useState("");
+  const [findCount, setFindCount] = useState(0);
+  const [paragraphCount, setParagraphCount] = useState(0);
 
   // Calculate stats
   useEffect(() => {
     const words = value.trim().split(/\s+/).filter(Boolean).length;
     setWordCount(words);
     setCharCount(value.length);
-    setReadingTime(Math.ceil(words / 200)); // ~200 words per minute
+    setReadingTime(Math.ceil(words / 200));
+    setParagraphCount(value.split(/\n\s*\n/).filter((p) => p.trim().length > 0).length);
   }, [value]);
+
+  // Find match count
+  useEffect(() => {
+    if (!findText) {
+      setFindCount(0);
+      return;
+    }
+    const escaped = findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const matches = value.match(new RegExp(escaped, "gi"));
+    setFindCount(matches?.length ?? 0);
+  }, [findText, value]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -44,23 +156,24 @@ export default function ArticleEditor({
           e.preventDefault();
           setIsFullscreen((f) => !f);
         }
+        if (e.key === "h" || e.key === "f") {
+          e.preventDefault();
+          setShowFindReplace((v) => !v);
+        }
       }
-      if (e.key === "Escape" && isFullscreen) {
-        setIsFullscreen(false);
+      if (e.key === "Escape") {
+        if (showFindReplace) setShowFindReplace(false);
+        else if (isFullscreen) setIsFullscreen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onSave, isFullscreen]);
+  }, [onSave, isFullscreen, showFindReplace]);
 
   // Insert formatting at cursor
   const insertFormatting = useCallback(
     (before: string, after: string = "", defaultText: string = "") => {
-      const editor = editorRef.current;
-      if (!editor) return;
-
-      // Get current cursor position in textarea
-      const textarea = editor.querySelector("textarea");
+      const textarea = textareaRef.current;
       if (!textarea) return;
 
       const start = textarea.selectionStart;
@@ -89,10 +202,7 @@ export default function ArticleEditor({
   // Insert block element at start of line
   const insertBlock = useCallback(
     (prefix: string, defaultText: string = "") => {
-      const editor = editorRef.current;
-      if (!editor) return;
-
-      const textarea = editor.querySelector("textarea");
+      const textarea = textareaRef.current;
       if (!textarea) return;
 
       const start = textarea.selectionStart;
@@ -116,6 +226,65 @@ export default function ArticleEditor({
         textarea.focus();
         const newPos = lineStart + prefix.length + selectedText.length;
         textarea.setSelectionRange(newPos, newPos);
+      }, 0);
+    },
+    [value, onChange]
+  );
+
+  // Find & Replace helpers
+  const handleFindNext = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !findText) return;
+    const idx = value.toLowerCase().indexOf(findText.toLowerCase(), textarea.selectionEnd);
+    const pos = idx === -1 ? value.toLowerCase().indexOf(findText.toLowerCase()) : idx;
+    if (pos === -1) return;
+    textarea.focus();
+    textarea.setSelectionRange(pos, pos + findText.length);
+  }, [value, findText]);
+
+  const handleReplaceOne = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !findText) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = value.substring(start, end);
+    if (selected.toLowerCase() === findText.toLowerCase()) {
+      const newValue = value.substring(0, start) + replaceText + value.substring(end);
+      onChange(newValue);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + replaceText.length, start + replaceText.length);
+      }, 0);
+    } else {
+      handleFindNext();
+    }
+  }, [value, onChange, findText, replaceText, handleFindNext]);
+
+  const handleReplaceAll = useCallback(() => {
+    if (!findText) return;
+    const escaped = findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const newValue = value.replace(new RegExp(escaped, "gi"), replaceText);
+    onChange(newValue);
+  }, [value, onChange, findText, replaceText]);
+
+  // Handle paste — convert HTML clipboard to markdown
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const html = e.clipboardData.getData("text/html");
+      if (!html) return; // let default plain-text paste happen
+
+      e.preventDefault();
+      const md = htmlToMarkdown(html);
+      const textarea = e.currentTarget;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newValue = value.substring(0, start) + md + value.substring(end);
+      onChange(newValue);
+
+      setTimeout(() => {
+        textarea.focus();
+        const pos = start + md.length;
+        textarea.setSelectionRange(pos, pos);
       }, 0);
     },
     [value, onChange]
@@ -564,7 +733,7 @@ export default function ArticleEditor({
 
             <ToolbarButton
               onClick={() => {
-                const textarea = editorRef.current?.querySelector("textarea");
+                const textarea = textareaRef.current;
                 if (!textarea) return;
                 const pos = textarea.selectionStart;
                 const newValue = value.substring(0, pos) + "\n\n---\n\n" + value.substring(pos);
@@ -574,6 +743,52 @@ export default function ArticleEditor({
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2 11h2v2H2v-2zm4 0h12v2H6v-2zm14 0h2v2h-2v-2z"/>
+              </svg>
+            </ToolbarButton>
+
+            <ToolbarDivider />
+
+            {/* Code block */}
+            <ToolbarButton
+              onClick={() => insertFormatting("\n```\n", "\n```\n", "code block")}
+              title="Code Block (Ctrl+Shift+K)"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+            </ToolbarButton>
+
+            <ToolbarDivider />
+
+            {/* Font size selector */}
+            <div className="relative">
+              <select
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+                title="Font Size"
+                className="appearance-none bg-white border border-zinc-200 rounded-md px-2 py-1.5 pr-6 text-xs font-medium text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300 cursor-pointer"
+              >
+                {FONT_SIZES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label} ({s.value}px)
+                  </option>
+                ))}
+              </select>
+              <svg className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+
+            <ToolbarDivider />
+
+            {/* Find & Replace toggle */}
+            <ToolbarButton
+              onClick={() => setShowFindReplace((v) => !v)}
+              title="Find & Replace (Ctrl+H)"
+              active={showFindReplace}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </ToolbarButton>
           </div>
@@ -665,6 +880,77 @@ export default function ArticleEditor({
         </div>
       </div>
 
+      {/* Find & Replace panel */}
+      {showFindReplace && (
+        <div className="flex-none border-b border-zinc-200 bg-amber-50 px-4 py-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={findText}
+                onChange={(e) => setFindText(e.target.value)}
+                placeholder="Find..."
+                className="w-44 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleFindNext();
+                  if (e.key === "Escape") setShowFindReplace(false);
+                }}
+                autoFocus
+              />
+              {findText && (
+                <span className="text-xs text-zinc-500 font-medium whitespace-nowrap">
+                  {findCount} match{findCount !== 1 ? "es" : ""}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleFindNext}
+                className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={replaceText}
+                onChange={(e) => setReplaceText(e.target.value)}
+                placeholder="Replace with..."
+                className="w-44 rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleReplaceOne();
+                  if (e.key === "Escape") setShowFindReplace(false);
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleReplaceOne}
+                className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50 transition-colors"
+              >
+                Replace
+              </button>
+              <button
+                type="button"
+                onClick={handleReplaceAll}
+                className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50 transition-colors"
+              >
+                All
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFindReplace(false)}
+              className="ml-auto p-1 rounded text-zinc-400 hover:text-zinc-700 transition-colors"
+              title="Close (Esc)"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Editor pane */}
@@ -681,41 +967,163 @@ export default function ArticleEditor({
             </div>
             <div className="flex-1 overflow-hidden">
               <textarea
+                ref={textareaRef}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
+                onPaste={handlePaste}
                 placeholder={placeholder}
-                className="w-full h-full p-6 text-base leading-relaxed resize-none focus:outline-none font-mono text-zinc-800 bg-white"
+                spellCheck
+                className="w-full h-full p-6 leading-relaxed resize-none focus:outline-none font-mono text-zinc-800 bg-white"
                 style={{ 
+                  fontSize: `${fontSize}px`,
                   tabSize: 2,
                   lineHeight: "1.8",
                 }}
                 onKeyDown={(e) => {
+                  const textarea = e.currentTarget;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+
                   // Ctrl+B for bold
                   if ((e.ctrlKey || e.metaKey) && e.key === "b") {
                     e.preventDefault();
                     insertFormatting("**", "**", "bold");
+                    return;
                   }
                   // Ctrl+I for italic
                   if ((e.ctrlKey || e.metaKey) && e.key === "i") {
                     e.preventDefault();
                     insertFormatting("*", "*", "italic");
+                    return;
                   }
                   // Ctrl+K for link
                   if ((e.ctrlKey || e.metaKey) && e.key === "k") {
                     e.preventDefault();
                     insertFormatting("[", "](https://)", "link text");
+                    return;
                   }
-                  // Tab for indent
+                  // Ctrl+Shift+K for code block
+                  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "K") {
+                    e.preventDefault();
+                    insertFormatting("\n```\n", "\n```\n", "code");
+                    return;
+                  }
+                  // Ctrl+Shift+. for blockquote
+                  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === ">") {
+                    e.preventDefault();
+                    insertBlock("> ", "quote");
+                    return;
+                  }
+
+                  // Tab / Shift+Tab — indent / outdent
                   if (e.key === "Tab") {
                     e.preventDefault();
-                    const textarea = e.target as HTMLTextAreaElement;
-                    const start = textarea.selectionStart;
-                    const end = textarea.selectionEnd;
-                    const newValue = value.substring(0, start) + "  " + value.substring(end);
-                    onChange(newValue);
-                    setTimeout(() => {
-                      textarea.selectionStart = textarea.selectionEnd = start + 2;
-                    }, 0);
+                    if (start === end && !e.shiftKey) {
+                      // No selection: insert 2 spaces
+                      const nv = value.substring(0, start) + "  " + value.substring(end);
+                      onChange(nv);
+                      setTimeout(() => {
+                        textarea.selectionStart = textarea.selectionEnd = start + 2;
+                      }, 0);
+                    } else {
+                      // Multi-line indent / outdent
+                      let lineStart = start;
+                      while (lineStart > 0 && value[lineStart - 1] !== "\n") lineStart--;
+                      const block = value.substring(lineStart, end);
+                      const lines = block.split("\n");
+                      const transformed = lines.map((l) =>
+                        e.shiftKey ? l.replace(/^  /, "") : "  " + l
+                      );
+                      const newBlock = transformed.join("\n");
+                      const nv = value.substring(0, lineStart) + newBlock + value.substring(end);
+                      onChange(nv);
+                      const delta = newBlock.length - block.length;
+                      setTimeout(() => {
+                        textarea.selectionStart = lineStart;
+                        textarea.selectionEnd = end + delta;
+                      }, 0);
+                    }
+                    return;
+                  }
+
+                  // Enter — auto-continue lists
+                  if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                    // Find current line
+                    let ls = start;
+                    while (ls > 0 && value[ls - 1] !== "\n") ls--;
+                    const currentLine = value.substring(ls, start);
+
+                    // Check for unordered list prefix
+                    const ulPrefixMatch = currentLine.match(/^(\s*)([-•*])\s+/);
+                    if (ulPrefixMatch) {
+                      // If the line after the prefix is empty, clear the list marker
+                      const afterPrefix = currentLine.substring(ulPrefixMatch[0].length).trim();
+                      if (!afterPrefix) {
+                        // Remove the list prefix (clear the line)
+                        e.preventDefault();
+                        const nv = value.substring(0, ls) + "\n" + value.substring(end);
+                        onChange(nv);
+                        setTimeout(() => {
+                          textarea.selectionStart = textarea.selectionEnd = ls + 1;
+                        }, 0);
+                        return;
+                      }
+                      e.preventDefault();
+                      const newPrefix = `\n${ulPrefixMatch[1]}${ulPrefixMatch[2]} `;
+                      const nv = value.substring(0, start) + newPrefix + value.substring(end);
+                      onChange(nv);
+                      setTimeout(() => {
+                        textarea.selectionStart = textarea.selectionEnd = start + newPrefix.length;
+                      }, 0);
+                      return;
+                    }
+
+                    // Check for ordered list prefix
+                    const olPrefixMatch = currentLine.match(/^(\s*)(\d+)\.\s+/);
+                    if (olPrefixMatch) {
+                      const afterPrefix = currentLine.substring(olPrefixMatch[0].length).trim();
+                      if (!afterPrefix) {
+                        e.preventDefault();
+                        const nv = value.substring(0, ls) + "\n" + value.substring(end);
+                        onChange(nv);
+                        setTimeout(() => {
+                          textarea.selectionStart = textarea.selectionEnd = ls + 1;
+                        }, 0);
+                        return;
+                      }
+                      e.preventDefault();
+                      const nextNum = parseInt(olPrefixMatch[2], 10) + 1;
+                      const newPrefix = `\n${olPrefixMatch[1]}${nextNum}. `;
+                      const nv = value.substring(0, start) + newPrefix + value.substring(end);
+                      onChange(nv);
+                      setTimeout(() => {
+                        textarea.selectionStart = textarea.selectionEnd = start + newPrefix.length;
+                      }, 0);
+                      return;
+                    }
+
+                    // Check for blockquote prefix
+                    const quotePrefixMatch = currentLine.match(/^(\s*>)\s+/);
+                    if (quotePrefixMatch) {
+                      const afterPrefix = currentLine.substring(quotePrefixMatch[0].length).trim();
+                      if (!afterPrefix) {
+                        e.preventDefault();
+                        const nv = value.substring(0, ls) + "\n" + value.substring(end);
+                        onChange(nv);
+                        setTimeout(() => {
+                          textarea.selectionStart = textarea.selectionEnd = ls + 1;
+                        }, 0);
+                        return;
+                      }
+                      e.preventDefault();
+                      const newPrefix = `\n${quotePrefixMatch[1]} `;
+                      const nv = value.substring(0, start) + newPrefix + value.substring(end);
+                      onChange(nv);
+                      setTimeout(() => {
+                        textarea.selectionStart = textarea.selectionEnd = start + newPrefix.length;
+                      }, 0);
+                      return;
+                    }
                   }
                 }}
               />
@@ -751,14 +1159,27 @@ export default function ArticleEditor({
           <div className="flex items-center gap-4">
             <span>{wordCount} words</span>
             <span>{charCount} characters</span>
+            <span>{paragraphCount} paragraph{paragraphCount !== 1 ? "s" : ""}</span>
             <span>~{readingTime} min read</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="text-zinc-400">
-              <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">S</kbd> Save
+              <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">Ctrl+S</kbd> Save
             </span>
             <span className="text-zinc-400">
-              <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">\</kbd> Fullscreen
+              <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">Ctrl+B</kbd> Bold
+            </span>
+            <span className="text-zinc-400">
+              <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">Ctrl+I</kbd> Italic
+            </span>
+            <span className="text-zinc-400">
+              <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">Ctrl+H</kbd> Find
+            </span>
+            <span className="text-zinc-400">
+              <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">Tab</kbd> Indent
+            </span>
+            <span className="text-zinc-400">
+              <kbd className="px-1.5 py-0.5 bg-zinc-200 rounded text-xs">Ctrl+\</kbd> Fullscreen
             </span>
           </div>
         </div>
