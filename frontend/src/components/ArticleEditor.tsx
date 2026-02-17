@@ -399,14 +399,15 @@ export default function ArticleEditor({
           ? "fixed inset-0 z-50"
           : "rounded-xl border border-zinc-200 shadow-sm"
       }`}
-      style={{
-        height: isFullscreen ? "100vh" : "calc(100vh - 200px)",
-        minHeight: "500px",
-      }}
+      style={
+        isFullscreen
+          ? { height: "100vh" }
+          : { height: "calc(100vh - 140px)", minHeight: "500px" }
+      }
     >
       {/* ─── Toolbar ─── */}
-      <div className="flex-none border-b border-zinc-200 bg-zinc-50 px-3 py-1.5 overflow-x-auto overflow-y-visible relative z-20">
-        <div className="flex items-center gap-0.5 min-w-0">
+      <div className="flex-none border-b border-zinc-200 bg-zinc-50 px-3 py-1.5 relative z-20">
+        <div className="flex items-center gap-0.5 flex-wrap">
           {/* Undo / Redo */}
           <ToolbarBtn
             onClick={() => editor.chain().focus().undo().run()}
