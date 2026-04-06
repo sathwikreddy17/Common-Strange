@@ -7,11 +7,11 @@ from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .media_pipeline import image_variants_webp
 from .models import MediaAsset
 from .permissions import IsWriter
 from .serializers_media import MediaAssetSerializer, MediaUploadSerializer
 from .storage import guess_content_type, key_join, put_bytes
+from .tasks import process_uploaded_media_asset
 
 
 class EditorMediaUploadView(APIView):
@@ -39,43 +39,19 @@ class EditorMediaUploadView(APIView):
         token = secrets.token_hex(8)
         base = key_join("media", str(asset.id), token)
 
-        # Store original
+        # Store original synchronously — this is fast (raw bytes, no processing).
         original_ext = (getattr(f, "name", "") or "").split(".")[-1].lower()
         original_ext = original_ext if original_ext and len(original_ext) <= 5 else "bin"
         original_key = key_join(base, f"original.{original_ext}")
         put_bytes(key=original_key, data=raw, content_type=mime)
 
-        # Variants (webp)
-        # If the file isn't an image Pillow can handle, just skip variants.
-        width = height = None
-        thumb_key = medium_key = large_key = ""
-        try:
-            variants = image_variants_webp(raw)
-            (thumb_bytes, w, h) = variants["thumb"]
-            thumb_key = key_join(base, "thumb.webp")
-            put_bytes(key=thumb_key, data=thumb_bytes, content_type="image/webp")
-
-            (med_bytes, w2, h2) = variants["medium"]
-            medium_key = key_join(base, "medium.webp")
-            put_bytes(key=medium_key, data=med_bytes, content_type="image/webp")
-
-            (lg_bytes, w3, h3) = variants["large"]
-            large_key = key_join(base, "large.webp")
-            put_bytes(key=large_key, data=lg_bytes, content_type="image/webp")
-
-            # Record dimensions from medium.
-            width, height = w2, h2
-        except Exception:
-            pass
-
         asset.original_key = original_key
-        asset.thumb_key = thumb_key
-        asset.medium_key = medium_key
-        asset.large_key = large_key
-        asset.width = width
-        asset.height = height
         asset.updated_at = timezone.now()
-        asset.save()
+        asset.save(update_fields=["original_key", "updated_at"])
+
+        # Variant generation (resize → WebP) is CPU + I/O heavy and can breach
+        # Render's 30s request timeout on large images. Offload to Celery worker.
+        process_uploaded_media_asset.delay(asset.id, base)
 
         return Response({"media": MediaAssetSerializer(asset).data}, status=201)
 

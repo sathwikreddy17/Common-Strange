@@ -48,19 +48,63 @@ def update_search_index_for_article(article_id: int) -> bool:
 
 
 @shared_task
-def process_uploaded_media_asset(media_asset_id: int) -> int:
-    """Process uploaded media (e.g., generate variants) asynchronously."""
+def process_uploaded_media_asset(media_asset_id: int, base_key: str) -> int:
+    """Generate WebP variants for an uploaded image asynchronously.
+
+    Reads the original from storage, produces thumb/medium/large WebP variants,
+    stores them, and updates the MediaAsset record. Running this in Celery avoids
+    blocking the upload request (and hitting Render's 30s timeout on large images).
+    """
+    from .media_pipeline import image_variants_webp
+    from .storage import get_bytes, put_bytes, key_join
+
     try:
         asset = MediaAsset.objects.get(pk=media_asset_id)
-        # Media variants are already generated at upload time
-        # This task is a placeholder for future heavy processing
+    except MediaAsset.DoesNotExist:
+        logger.warning(f"MediaAsset {media_asset_id} not found for variant generation")
+        return 0
+
+    if not asset.original_key:
+        logger.warning(f"MediaAsset {media_asset_id} has no original_key; skipping variants")
+        return media_asset_id
+
+    try:
+        raw = get_bytes(asset.original_key)
+    except Exception as exc:
+        logger.error(f"Could not fetch original for MediaAsset {media_asset_id}: {exc}")
+        raise
+
+    try:
+        variants = image_variants_webp(raw)
+    except Exception:
+        # Not an image Pillow can handle — leave variants empty, original is enough.
+        logger.info(f"MediaAsset {media_asset_id} is not an image; skipping variants")
         asset.updated_at = timezone.now()
         asset.save(update_fields=["updated_at"])
-        logger.info(f"Processed media asset {media_asset_id}")
         return media_asset_id
-    except MediaAsset.DoesNotExist:
-        logger.warning(f"MediaAsset {media_asset_id} not found")
-        return 0
+
+    thumb_bytes, _, _ = variants["thumb"]
+    med_bytes, mw, mh = variants["medium"]
+    lg_bytes, _, _ = variants["large"]
+
+    thumb_key = key_join(base_key, "thumb.webp")
+    medium_key = key_join(base_key, "medium.webp")
+    large_key = key_join(base_key, "large.webp")
+
+    put_bytes(key=thumb_key, data=thumb_bytes, content_type="image/webp")
+    put_bytes(key=medium_key, data=med_bytes, content_type="image/webp")
+    put_bytes(key=large_key, data=lg_bytes, content_type="image/webp")
+
+    asset.thumb_key = thumb_key
+    asset.medium_key = medium_key
+    asset.large_key = large_key
+    asset.width = mw
+    asset.height = mh
+    asset.updated_at = timezone.now()
+    asset.save(update_fields=["thumb_key", "medium_key", "large_key", "width", "height", "updated_at"])
+
+    logger.info(f"Generated variants for MediaAsset {media_asset_id}")
+    return media_asset_id
 
 
 @shared_task

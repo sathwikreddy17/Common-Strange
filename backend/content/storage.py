@@ -38,9 +38,12 @@ def _cloudinary_url_for_key(key: str) -> str:
     """Return the Cloudinary delivery URL for a given key."""
     import cloudinary
     cloud_name = cloudinary.config().cloud_name or ""
-    ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
     public_id = _cloudinary_public_id(key)
-    return f"https://res.cloudinary.com/{cloud_name}/image/upload/{public_id}.{ext}"
+    # Cloudinary manages format via the public_id suffix; only append the
+    # extension when the key actually has one to avoid a trailing-dot URL.
+    ext = key.rsplit(".", 1)[-1].lower() if "." in key else ""
+    suffix = f".{ext}" if ext else ""
+    return f"https://res.cloudinary.com/{cloud_name}/image/upload/{public_id}{suffix}"
 
 
 def public_url_for_key(key: str) -> str:
