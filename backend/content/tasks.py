@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from celery import shared_task
-from django.db import transaction
+
 from django.utils import timezone
 
 from .models import Article, ArticleStatus, MediaAsset
@@ -110,48 +110,55 @@ def process_uploaded_media_asset(media_asset_id: int, base_key: str) -> int:
 @shared_task
 def aggregate_article_metrics() -> int:
     """Aggregate article metrics from events.
-    
-    Called periodically by cron to pre-compute trending data.
+
+    Called periodically by Celery beat to pre-compute trending data.
+    Uses a single annotated query instead of per-article queries to avoid N+1.
     """
-    from django.db.models import Count, Avg, Q
+    from django.db.models import Avg, Count, Q
+    from django.core.cache import cache
     from .events import EventKind
-    
+
     now = timezone.now()
     since_24h = now - timezone.timedelta(hours=24)
     since_7d = now - timezone.timedelta(days=7)
-    
-    articles = Article.objects.filter(status=ArticleStatus.PUBLISHED)
-    
+
+    rows = (
+        Article.objects.filter(status=ArticleStatus.PUBLISHED)
+        .annotate(
+            views_24h=Count(
+                "events",
+                filter=Q(events__kind=EventKind.PAGEVIEW, events__created_at__gte=since_24h),
+            ),
+            views_7d=Count(
+                "events",
+                filter=Q(events__kind=EventKind.PAGEVIEW, events__created_at__gte=since_7d),
+            ),
+            views_total=Count(
+                "events",
+                filter=Q(events__kind=EventKind.PAGEVIEW),
+            ),
+            avg_read_ratio=Avg(
+                "events__read_ratio",
+                filter=Q(events__kind=EventKind.READ, events__read_ratio__isnull=False),
+            ),
+        )
+        .values("id", "views_24h", "views_7d", "views_total", "avg_read_ratio")
+    )
+
     count = 0
-    for article in articles.iterator():
-        views_24h = article.events.filter(
-            kind=EventKind.PAGEVIEW,
-            created_at__gte=since_24h
-        ).count()
-        
-        views_7d = article.events.filter(
-            kind=EventKind.PAGEVIEW,
-            created_at__gte=since_7d
-        ).count()
-        
-        views_total = article.events.filter(kind=EventKind.PAGEVIEW).count()
-        
-        avg_read = article.events.filter(
-            kind=EventKind.READ,
-            read_ratio__isnull=False
-        ).aggregate(avg=Avg("read_ratio"))["avg"] or 0.0
-        
-        # Store in cache for now (could be a separate model later)
-        from django.core.cache import cache
-        cache.set(f"metrics:{article.id}", {
-            "views_24h": views_24h,
-            "views_7d": views_7d,
-            "views_total": views_total,
-            "avg_read_ratio": avg_read,
-        }, timeout=3600)  # 1 hour
-        
+    for row in rows.iterator():
+        cache.set(
+            f"metrics:{row['id']}",
+            {
+                "views_24h": row["views_24h"],
+                "views_7d": row["views_7d"],
+                "views_total": row["views_total"],
+                "avg_read_ratio": float(row["avg_read_ratio"] or 0.0),
+            },
+            timeout=3600,
+        )
         count += 1
-    
+
     logger.info(f"Aggregated metrics for {count} articles")
     return count
 

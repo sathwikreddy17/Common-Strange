@@ -76,6 +76,21 @@ services:
     volumes:
       - ./backend:/app
 
+  beat:
+    build: ./backend
+    command: celery -A config beat -l INFO
+    env_file:
+      - ./backend/.env.local
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
   frontend:
     build:
       context: ./frontend

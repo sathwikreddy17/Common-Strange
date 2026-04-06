@@ -224,6 +224,22 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
+# Periodic tasks (requires celery beat worker: `celery -A config beat`)
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    # Pre-compute trending/metrics every 15 minutes.
+    "aggregate-article-metrics": {
+        "task": "content.tasks.aggregate_article_metrics",
+        "schedule": crontab(minute="*/15"),
+    },
+    # Remove expired preview tokens once an hour.
+    "cleanup-expired-preview-tokens": {
+        "task": "content.tasks.cleanup_expired_preview_tokens",
+        "schedule": crontab(minute=0),  # top of every hour
+    },
+}
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
